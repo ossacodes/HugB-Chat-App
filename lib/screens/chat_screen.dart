@@ -1,15 +1,22 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+// import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
+import 'package:hugb/screens/widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
     required this.username,
     required this.avatar,
+    required this.userId,
+    required this.email,
+    required this.docId,
   });
 
   final String username;
   final String avatar;
+  final String userId;
+  final String email;
+  final String docId;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -18,8 +25,29 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   String textMessage = '';
+  // final client = MongoRealmClient();
+
+  List<Widget> messageBubbles = const [
+    MessageBubble(
+      isMe: true,
+      message: 'Hi',
+      unread: false,
+    ),
+    MessageBubble(
+      isMe: false,
+      message: 'Hey',
+      unread: false,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    // final messageCollection =
+    //     client.getDatabase('hugb-db').getCollection('messages');
+    // messageCollection.watch().listen((event) { 
+    //   print('event');
+    //   print(event);
+    // });
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -34,10 +62,11 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             const SizedBox(width: 10.0),
-            CircleAvatar(
-              radius: 20.0,
-              backgroundImage: CachedNetworkImageProvider(
-                widget.avatar,
+            const CircleAvatar(
+              radius: 20,
+              child: Icon(
+                Icons.person,
+                size: 25,
               ),
             ),
             const SizedBox(width: 10.0),
@@ -71,7 +100,19 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: Container(),
+              child: ListView.builder(
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0,
+                      vertical: 20.0,
+                    ),
+                    itemCount: messageBubbles.length,
+                    itemBuilder: (context, index) {
+                      // int index2 = messageBubbles.length - index;
+                      // return messageBubbles[(messageBubbles.length -1) - index];
+                      return messageBubbles.reversed.toList()[index];
+                    },
+                  ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -141,6 +182,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                     if (textMessage != ' ') {
                                       // final timeStamp =
                                       //     DateTime.now().millisecondsSinceEpoch;
+                                      // final collection = client
+                                      //     .getDatabase('hugb-db')
+                                      //     .getCollection('chats');
+                                      // await collection.insertOne(
+                                      //   MongoDocument(
+                                      //     {
+                                      //       'chatOwnerId': '',
+                                      //       'userId': widget.userId,
+                                      //       'currentMessage': textMessage,
+                                      //       'username': widget.username,
+                                      //       'email': widget.email,
+                                      //     },
+                                      //   ),
+                                      // );
                                     }
                                   }
                                 },

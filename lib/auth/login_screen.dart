@@ -1,13 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
+// import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/auth/signup_screen.dart';
 import 'package:hugb/screens/home_screen.dart';
+import 'package:provider/provider.dart';
 import '../../config/loader.dart';
 import '../../config/palette.dart';
+import '../realm/app_services.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -19,7 +21,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   var box = Hive.box('myData');
-  final app = RealmApp();
+  // final app = RealmApp();
 
   String email = '';
 
@@ -29,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appServices = Provider.of<AppServices>(context, listen: false);
     return Scaffold(
       // backgroundColor: Colors.white,
       body: load
@@ -154,17 +157,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     //   }
                                     // });
                                     try {
-                                      await app
-                                          .login(Credentials.emailPassword(
-                                              email, password))
-                                          .then((value) async {
-                                        await box.put('id', value!.id);
-                                        await box.put('isLoggedIn', true);
-                                        print('user ${value.id} logged in!');
-                                        Get.offAll(
-                                          const HomeScreen(),
-                                        );
-                                      });
+                                      appServices.logInUserEmailPassword(
+                                          email, password);
                                     } catch (e) {
                                       Get.rawSnackbar(
                                         message: 'Wrong email or password!',

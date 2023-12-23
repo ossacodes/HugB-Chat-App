@@ -47,10 +47,6 @@ PODS:
     - GoogleUtilities/UserDefaults (~> 7.8)
     - nanopb (< 2.30910.0, >= 2.30908.0)
   - Flutter (1.0.0)
-  - flutter_mongodb_realm (0.0.2):
-    - Flutter
-    - RealmSwift (= 10.33.0)
-    - StitchSDK (= 6.4.0)
   - FMDB (2.7.5):
     - FMDB/standard (= 2.7.5)
   - FMDB/standard (2.7.5)
@@ -76,17 +72,6 @@ PODS:
   - GoogleUtilities/UserDefaults (7.12.0):
     - GoogleUtilities/Logger
   - GTMSessionFetcher/Core (3.1.1)
-  - mongo-embedded-c-driver (1.13.0-4.0.4)
-  - mongo_embedded (4.0.4)
-  - mongoc_embedded (4.0.4):
-    - mongo-embedded-c-driver (~> 1.13.0-4.0.4)
-    - mongo_embedded (~> 4.0.4)
-  - MongoMobile (0.1.0):
-    - mongo_embedded (~> 4.0.4)
-    - mongoc_embedded (~> 4.0.4)
-    - MongoSwift (~> 0.1.0)
-  - MongoSwift (0.1.0):
-    - mongo-embedded-c-driver (~> 1.13.0-4.0.0)
   - nanopb (2.30909.1):
     - nanopb/decode (= 2.30909.1)
     - nanopb/encode (= 2.30909.1)
@@ -96,46 +81,21 @@ PODS:
     - Flutter
     - FlutterMacOS
   - PromisesObjC (2.3.1)
-  - Realm (10.33.0):
-    - Realm/Headers (= 10.33.0)
-  - Realm/Headers (10.33.0)
-  - RealmSwift (10.33.0):
-    - Realm (= 10.33.0)
+  - realm (1.2.0):
+    - Flutter
   - RecaptchaInterop (100.0.0)
   - sqflite (0.0.3):
     - Flutter
     - FMDB (>= 2.7.5)
-  - StitchCore (6.4.0):
-    - StitchCoreSDK (= 6.4.0)
-  - StitchCoreLocalMongoDBService (6.4.0):
-    - MongoMobile (= 0.1.0)
-    - StitchCoreSDK (= 6.4.0)
-  - StitchCoreRemoteMongoDBService (6.4.0):
-    - StitchCoreLocalMongoDBService (= 6.4.0)
-    - StitchCoreSDK (= 6.4.0)
-  - StitchCoreSDK (6.4.0):
-    - MongoSwift (= 0.1.0)
-  - StitchRemoteMongoDBService (6.4.0):
-    - StitchCore (= 6.4.0)
-    - StitchCoreRemoteMongoDBService (= 6.4.0)
-  - StitchSDK (6.4.0):
-    - StitchSDK/StitchSDK (= 6.4.0)
-  - StitchSDK/StitchRemoteMongoDBService (6.4.0):
-    - StitchRemoteMongoDBService (= 6.4.0)
-  - StitchSDK/StitchSDK (6.4.0):
-    - StitchSDK/StitchRemoteMongoDBService
-  - streams_channel3 (0.0.1):
-    - Flutter
 
 DEPENDENCIES:
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
   - Flutter (from `Flutter`)
-  - flutter_mongodb_realm (from `.symlinks/plugins/flutter_mongodb_realm/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - realm (from `.symlinks/plugins/realm/ios`)
   - sqflite (from `.symlinks/plugins/sqflite/ios`)
-  - streams_channel3 (from `.symlinks/plugins/streams_channel3/ios`)
 
 SPEC REPOS:
   trunk:
@@ -150,22 +110,9 @@ SPEC REPOS:
     - GoogleDataTransport
     - GoogleUtilities
     - GTMSessionFetcher
-    - mongo-embedded-c-driver
-    - mongo_embedded
-    - mongoc_embedded
-    - MongoMobile
-    - MongoSwift
     - nanopb
     - PromisesObjC
-    - Realm
-    - RealmSwift
     - RecaptchaInterop
-    - StitchCore
-    - StitchCoreLocalMongoDBService
-    - StitchCoreRemoteMongoDBService
-    - StitchCoreSDK
-    - StitchRemoteMongoDBService
-    - StitchSDK
 
 EXTERNAL SOURCES:
   firebase_auth:
@@ -176,14 +123,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_messaging/ios"
   Flutter:
     :path: Flutter
-  flutter_mongodb_realm:
-    :path: ".symlinks/plugins/flutter_mongodb_realm/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  realm:
+    :path: ".symlinks/plugins/realm/ios"
   sqflite:
     :path: ".symlinks/plugins/sqflite/ios"
-  streams_channel3:
-    :path: ".symlinks/plugins/streams_channel3/ios"
 
 SPEC CHECKSUMS:
   Firebase: 414ad272f8d02dfbf12662a9d43f4bba9bec2a06
@@ -197,30 +142,16 @@ SPEC CHECKSUMS:
   FirebaseInstallations: e842042ec6ac1fd2e37d7706363ebe7f662afea4
   FirebaseMessaging: 9bc34a98d2e0237e1b121915120d4d48ddcf301e
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
-  flutter_mongodb_realm: a57f56ac34bb11f9688736824b66e93cf5a31204
   FMDB: 2ce00b547f966261cd18927a3ddb07cb6f3db82a
   GoogleDataTransport: 54dee9d48d14580407f8f5fbf2f496e92437a2f2
   GoogleUtilities: 0759d1a57ebb953965c2dfe0ba4c82e95ccc2e34
   GTMSessionFetcher: e8647203b65cee28c5f73d0f473d096653945e72
-  mongo-embedded-c-driver: b46360baa15fc142baae80628822f26663220bde
-  mongo_embedded: e413134eb6b60544e7278add03007f8fe384a00c
-  mongoc_embedded: 41aadbb756b07070d6f0471192a84750cb42c580
-  MongoMobile: 988e8d2fd322761d6358570dde8a2b3d44801823
-  MongoSwift: e20f86eae1beb06bbba49c2d73bb570961cc4c85
   nanopb: d4d75c12cd1316f4a64e3c6963f879ecd4b5e0d5
   path_provider_foundation: 29f094ae23ebbca9d3d0cec13889cd9060c0e943
   PromisesObjC: c50d2056b5253dadbd6c2bea79b0674bd5a52fa4
-  Realm: d4f810e161fa2c2c589b9860b6eb09238deacd73
-  RealmSwift: cef9946f09f2333a8f2ac8bac4f8de52fb9f5ac3
+  realm: 8a2b8acec36aba0c15e81d9e7a4cbc355a43e5fc
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
   sqflite: 31f7eba61e3074736dff8807a9b41581e4f7f15a
-  StitchCore: 344f59b617dd5be8c32f0a2fdef39fb96591fc33
-  StitchCoreLocalMongoDBService: 26c339ea689d9633b33e266274406e7b4c3f2786
-  StitchCoreRemoteMongoDBService: e328908dde887cb3a9e3465793b37b69cb19c0e7
-  StitchCoreSDK: 4c4b847470229535a66f8ba6b2911c2eafc0d866
-  StitchRemoteMongoDBService: f5befbafb01720c4d7193e054907fa0ebff569f0
-  StitchSDK: 198397b6400c1fdd58e3e78300fe60374c700fe9
-  streams_channel3: c02a89207132213ec61b93940bee8fe258a8fe62
 
 PODFILE CHECKSUM: 54b185feb1f1a46828195b531a3f58168b285e87
 

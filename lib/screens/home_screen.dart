@@ -1,11 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_mongodb_realm/realm_app.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/auth/login_screen.dart';
+import 'package:hugb/realm/realm_services.dart';
+import 'package:provider/provider.dart';
 import '../models/chats_model.dart';
+import '../realm/app_services.dart';
 import 'chat_screen.dart';
+import 'widgets/search_delegate.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +18,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final app = RealmApp();
   var box = Hive.box('myData');
 
   List<ChatsModel> chats = [
@@ -42,8 +44,17 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
     // Add more chats here...
   ];
+
+  List<String> users = [
+    'Jane Doe',
+    'John Brad',
+    'Alice Lane',
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final appServices = Provider.of<AppServices>(context, listen: false);
+    final realmServices = Provider.of<RealmServices>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -55,14 +66,36 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              realmServices.createUser(
+                'xd',
+                '123',
+                'xd@gmail.com',
+              );
+              print('added');
+              // showSearch(
+              //   context: context,
+              //   delegate: UserSearchDelegate(users),
+              // );
+              // final collection =
+              //     client.getDatabase('hugb-db').getCollection('users');
+              // await collection.insertOne(
+              //   MongoDocument(
+              //     {
+              //       'username': 'ossama',
+              //       'email': 'ossama@gmail.com',
+              //     },
+              //   ),
+              // );
+            },
             icon: const Icon(Icons.search),
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) async {
               if (value == 'Logout') {
-                app.logout();
+                // app.logout();
+                appServices.logOut();
                 await box.put('id', null);
                 await box.put('isLoggedIn', false);
                 Get.offAll(
@@ -91,12 +124,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ChatScreen(
                     username: chats[index].username,
                     avatar: chats[index].avatar,
+                    userId: '',
+                    email: '',
+                    docId: '',
                   ),
                 );
               },
-              leading: CircleAvatar(
-                backgroundImage:
-                    CachedNetworkImageProvider(chats[index].avatar),
+              leading: const CircleAvatar(
+                radius: 25,
+                child: Icon(
+                  Icons.person,
+                  size: 30,
+                ),
               ),
               title: Text(chats[index].username),
               subtitle: Text(chats[index].recentMessage),

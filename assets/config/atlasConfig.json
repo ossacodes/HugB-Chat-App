@@ -1,0 +1,9 @@
+{
+    "appId": "application-0-gkmpl",
+    "appUrl": "https://realm.mongodb.com/groups/658313706f06780813bb377a/apps/6583b24bca62ad633db41ce0",
+    "baseUrl": "https://realm.mongodb.com",
+    "clientApiBaseUrl": "https://ap-south-1.aws.realm.mongodb.com",
+    "dataApiBaseUrl": "https://ap-south-1.aws.data.mongodb-api.com",
+    "dataExplorerLink": "https://cloud.mongodb.com/links/658313706f06780813bb377a/explorer/AtlasCluster/database/collection/find",
+    "dataSourceName": "mongodb-atlas"
+}
