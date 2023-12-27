@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 // import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
 import 'package:hugb/screens/widgets/message_bubble.dart';
+import 'package:hugb/services/app_services.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
@@ -25,7 +27,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   String textMessage = '';
-  // final client = MongoRealmClient();
+  var box = Hive.box('myData');
+  String chatId = '';
 
   List<Widget> messageBubbles = const [
     MessageBubble(
@@ -41,10 +44,20 @@ class _ChatScreenState extends State<ChatScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    chatId = AppServices.getChatId(
+      box.get('id'),
+      widget.userId,
+    );
+    print(chatId);
+  }
+
+  @override
   Widget build(BuildContext context) {
     // final messageCollection =
     //     client.getDatabase('hugb-db').getCollection('messages');
-    // messageCollection.watch().listen((event) { 
+    // messageCollection.watch().listen((event) {
     //   print('event');
     //   print(event);
     // });
@@ -101,18 +114,18 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Expanded(
               child: ListView.builder(
-                    reverse: true,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10.0,
-                      vertical: 20.0,
-                    ),
-                    itemCount: messageBubbles.length,
-                    itemBuilder: (context, index) {
-                      // int index2 = messageBubbles.length - index;
-                      // return messageBubbles[(messageBubbles.length -1) - index];
-                      return messageBubbles.reversed.toList()[index];
-                    },
-                  ),
+                reverse: true,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10.0,
+                  vertical: 20.0,
+                ),
+                itemCount: messageBubbles.length,
+                itemBuilder: (context, index) {
+                  // int index2 = messageBubbles.length - index;
+                  // return messageBubbles[(messageBubbles.length -1) - index];
+                  return messageBubbles.reversed.toList()[index];
+                },
+              ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -180,6 +193,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
                                   if (textMessage.isNotEmpty) {
                                     if (textMessage != ' ') {
+                                      await AppServices().createChat(
+                                        chatOwnerId: box.get('id'),
+                                        userId: widget.userId,
+                                        currentMessage: textMessage,
+                                        username: widget.username,
+                                        email: widget.email,
+                                        profileUrl: null,
+                                      );
+                                      // AppServices().createMessage(
+                                      //   chatId: chatId,
+                                      //   message: textMessage,
+                                      //   senderId: box.get('id'),
+                                      //   receiverId: widget.userId,
+                                      //   senderName: box.get('username'),
+                                      //   receiverName: widget.username,
+                                      //   senderEmail: box.get('email'),
+                                      //   receiverEmail: widget.email,
+                                      // );
+
                                       // final timeStamp =
                                       //     DateTime.now().millisecondsSinceEpoch;
                                       // final collection = client

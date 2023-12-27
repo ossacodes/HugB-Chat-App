@@ -1,14 +1,16 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/auth/login_screen.dart';
-import 'package:hugb/realm/realm_services.dart';
-import 'package:provider/provider.dart';
+import 'package:hugb/config/db_paths.dart';
+import 'package:hugb/screens/widgets/search_delegate.dart';
+import 'package:skeleton_animation/skeleton_animation.dart';
 import '../models/chats_model.dart';
-import '../realm/app_services.dart';
+import '../services/app_services.dart';
 import 'chat_screen.dart';
-import 'widgets/search_delegate.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +21,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   var box = Hive.box('myData');
+
+  final _firebaseMessaging = FirebaseMessaging.instance;
 
   List<ChatsModel> chats = [
     ChatsModel(
@@ -51,13 +55,75 @@ class _HomeScreenState extends State<HomeScreen> {
     'Alice Lane',
   ];
 
+  String databaseId = DbPaths.database;
+  String collectionId = DbPaths.usersCollection;
+  final client = Client()
+      .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
+      .setProject('6587168cbc8a1e9b32bb') // Your project ID
+      .setSelfSigned();
+
+  @override
+  void initState() {
+    super.initState();
+    _firebaseMessaging.getToken().then((token) async {
+      print('Device Token FCM: $token');
+      print(box.get('id'));
+      final databases = Databases(client);
+      try {
+        await databases.updateDocument(
+          databaseId: databaseId,
+          collectionId: collectionId,
+          documentId: box.get('id'),
+          data: {
+            'notificationToken': token,
+          },
+        );
+      } catch (e) {
+        print(e);
+      }
+    });
+  }
+
+  // @override
+  // void initState() {
+  //   super.initState();
+
+  //   final realtime = Realtime(client);
+  //   final subscription = realtime.subscribe(
+  //       ['databases.$databaseId.collections.$collectionId.documents']);
+
+  //   subscription.stream.listen((response) {
+  //     print(response.payload);
+  //     if (response.events
+  //         .contains("databases.*.collections.*.documents.*.update")) {
+  //       print(response.payload);
+  //     }
+  //   });
+  // }
+
+  // @override
+  // void dispose() {
+  //   super.dispose();
+  //   final realtime = Realtime(client);
+  //   final subscription = realtime.subscribe(
+  //       ['databases.$databaseId.collections.$collectionId.documents']);
+  //   subscription.close();
+  // }
+
   @override
   Widget build(BuildContext context) {
-    final appServices = Provider.of<AppServices>(context, listen: false);
-    final realmServices = Provider.of<RealmServices>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        // leading: const Padding(
+        //   padding: EdgeInsets.all(8.0),
+        //   child: CircleAvatar(
+        //     radius: 10,
+        //     child: Icon(
+        //       Icons.person,
+        //     ),
+        //   ),
+        // ),
         title: const Text(
           'HugB Chats',
           style: TextStyle(
@@ -67,16 +133,13 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             onPressed: () async {
-              realmServices.createUser(
-                'xd',
-                '123',
-                'xd@gmail.com',
-              );
+              // await AppServices()
+              //     .createUser('2131313', '32ed', 'sdcdcs@gmail.com');
               print('added');
-              // showSearch(
-              //   context: context,
-              //   delegate: UserSearchDelegate(users),
-              // );
+              showSearch(
+                context: context,
+                delegate: UserSearchDelegate(),
+              );
               // final collection =
               //     client.getDatabase('hugb-db').getCollection('users');
               // await collection.insertOne(
@@ -94,8 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.more_vert),
             onSelected: (value) async {
               if (value == 'Logout') {
-                // app.logout();
-                appServices.logOut();
+                Account account = Account(client);
+                await account.deleteSession(sessionId: 'current');
                 await box.put('id', null);
                 await box.put('isLoggedIn', false);
                 Get.offAll(
@@ -115,40 +178,68 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Center(
-        child: ListView.builder(
-          itemCount: chats.length,
-          itemBuilder: (context, index) {
-            return ListTile(
-              onTap: () {
-                Get.to(
-                  ChatScreen(
-                    username: chats[index].username,
-                    avatar: chats[index].avatar,
-                    userId: '',
-                    email: '',
-                    docId: '',
-                  ),
-                );
-              },
-              leading: const CircleAvatar(
-                radius: 25,
-                child: Icon(
-                  Icons.person,
-                  size: 30,
-                ),
-              ),
-              title: Text(chats[index].username),
-              subtitle: Text(chats[index].recentMessage),
-              trailing: chats[index].unreadMessagesCount > 0
-                  ? CircleAvatar(
-                      radius: 10.0,
-                      child: Text(
-                        '${chats[index].unreadMessagesCount}',
-                        style: const TextStyle(fontSize: 12.0),
-                      ),
-                    )
-                  : null,
-            );
+        child: FutureBuilder<DocumentList>(
+          future: AppServices().getChats(userId: box.get('id'), query: ''),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return ListView.builder(
+                itemCount: 10,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    tileColor: Colors.transparent,
+                    leading: Skeleton(
+                      width: 50,
+                      height: 50,
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    title: Skeleton(
+                      width: 100,
+                      height: 20,
+                    ),
+                    onTap: () {
+                      // Handle user tap
+                    },
+                  );
+                },
+              );
+            }
+
+            final usersData = snapshot.data!.documents;
+
+            return usersData.isNotEmpty
+                ? ListView.builder(
+                    itemCount: usersData.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.person),
+                        ),
+                        title: Text(
+                          usersData[index].data['username'],
+                        ),
+                        onTap: () {
+                          Get.to(
+                            ChatScreen(
+                              username: usersData[index].data['username'],
+                              avatar: '',
+                              userId: usersData[index].data['userId'],
+                              email: usersData[index].data['email'],
+                              docId: usersData[index].$id,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  )
+                : const Center(
+                    child: Text(
+                      'No chats yet',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueGrey),
+                    ),
+                  );
           },
         ),
       ),

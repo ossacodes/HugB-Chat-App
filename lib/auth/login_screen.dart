@@ -1,15 +1,13 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/auth/signup_screen.dart';
-import 'package:hugb/screens/home_screen.dart';
-import 'package:provider/provider.dart';
 import '../../config/loader.dart';
 import '../../config/palette.dart';
-import '../realm/app_services.dart';
+import '../screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -21,7 +19,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   var box = Hive.box('myData');
-  // final app = RealmApp();
+  Client client = Client();
 
   String email = '';
 
@@ -29,9 +27,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool load = false;
 
+  Future<void> login(String email, String password) async {
+    client
+        .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
+        .setProject('6587168cbc8a1e9b32bb') // Your project ID
+        .setSelfSigned();
+    Account account = Account(client);
+    await account.createEmailSession(email: email, password: password);
+    final user = await account.get();
+    box.put('id', user.$id);
+    box.put('isLoggedIn', true);
+    Get.offAll(
+      const HomeScreen(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final appServices = Provider.of<AppServices>(context, listen: false);
     return Scaffold(
       // backgroundColor: Colors.white,
       body: load
@@ -157,8 +169,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                     //   }
                                     // });
                                     try {
-                                      appServices.logInUserEmailPassword(
-                                          email, password);
+                                      client
+                                          .setEndpoint(
+                                              'https://exwoo.com/v1') // Your Appwrite Endpoint
+                                          .setProject(
+                                              '6587168cbc8a1e9b32bb') // Your project ID
+                                          .setSelfSigned();
+                                      Account account = Account(client);
+                                      await account.createEmailSession(
+                                        email: email,
+                                        password: password,
+                                      );
+                                      final user = await account.get();
+                                      box.put('id', user.$id);
+                                      box.put('isLoggedIn', true);
+                                      Get.offAll(
+                                        const HomeScreen(),
+                                      );
                                     } catch (e) {
                                       Get.rawSnackbar(
                                         message: 'Wrong email or password!',
@@ -171,15 +198,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                             Curves.easeOutBack,
                                       );
                                     }
-                                  } on FirebaseAuthException catch (e) {
-                                    if (e.code == 'user-not-found') {
-                                      print('No user found for that email.');
-                                      return null;
-                                    } else if (e.code == 'wrong-password') {
-                                      print(
-                                          'Wrong password provided for that user.');
-                                      return null;
-                                    }
+                                  } on AppwriteException catch (e) {
+                                    print(e.message);
                                   }
 
                                   setState(() {
