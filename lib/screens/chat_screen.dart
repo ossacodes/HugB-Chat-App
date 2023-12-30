@@ -1,5 +1,7 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:hugb/config/db_paths.dart';
 // import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
 import 'package:hugb/screens/widgets/message_bubble.dart';
 import 'package:hugb/services/app_services.dart';
@@ -29,19 +31,21 @@ class _ChatScreenState extends State<ChatScreen> {
   String textMessage = '';
   var box = Hive.box('myData');
   String chatId = '';
+  final client = Client()
+      .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
+      .setProject('6587168cbc8a1e9b32bb') // Your project ID
+      .setSelfSigned();
+  Stream<RealtimeMessage> messageStream = const Stream.empty();
+  late RealtimeSubscription subscription;
 
-  List<Widget> messageBubbles = const [
-    MessageBubble(
-      isMe: true,
-      message: 'Hi',
-      unread: false,
-    ),
-    MessageBubble(
-      isMe: false,
-      message: 'Hey',
-      unread: false,
-    ),
-  ];
+  // realTimeStream() {
+  //   final realtime = Realtime(client);
+  //   final subscription = realtime.subscribe([
+  //     'databases.${DbPaths.database}.collections.${DbPaths.messagesCollection}.documents'
+  //   ]);
+
+  //   return subscription.stream;
+  // }
 
   @override
   void initState() {
@@ -50,17 +54,79 @@ class _ChatScreenState extends State<ChatScreen> {
       box.get('id'),
       widget.userId,
     );
-    print(chatId);
+    final realtime = Realtime(client);
+    subscription = realtime.subscribe([
+      'databases.${DbPaths.database}.collections.${DbPaths.messagesCollection}.documents'
+    ]);
+
+    // subscription.stream.listen((response) {
+    //   print(response.payload);
+    //   if (response.events
+    //       .contains("databases.*.collections.*.documents.*.update")) {
+    //     print(response.payload);
+    //   }
+    // });
+
+    messageStream = subscription.stream;
+  }
+
+  Stream<List<MessageBubble>> messagesStream() async* {
+    final messagesData = await AppServices().getMessages(
+      chatId: chatId,
+      userId: box.get('id'),
+    );
+
+    List<MessageBubble> messageBubbles = [];
+
+    for (var element in messagesData.documents) {
+      messageBubbles.add(
+        MessageBubble(
+          isMe: element.data['senderId'] == box.get('id'),
+          message: element.data['message'],
+          unread: false,
+        ),
+      );
+    }
+
+    yield messageBubbles;
+
+    await for (final data in messageStream) {
+      if (data.events
+          .contains("databases.*.collections.*.documents.*.create")) {
+        final payload = data.payload;
+        if (payload['senderId'] == box.get('id') &&
+            payload['receiverId'] == widget.userId) {
+          messageBubbles.add(
+            MessageBubble(
+              isMe: true,
+              message: payload['message'],
+              unread: false,
+            ),
+          );
+        } else if (payload['senderId'] == widget.userId &&
+            payload['receiverId'] == box.get('id')) {
+          messageBubbles.add(
+            MessageBubble(
+              isMe: false,
+              message: payload['message'],
+              unread: false,
+            ),
+          );
+        }
+      }
+
+      yield messageBubbles;
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    subscription.close();
   }
 
   @override
   Widget build(BuildContext context) {
-    // final messageCollection =
-    //     client.getDatabase('hugb-db').getCollection('messages');
-    // messageCollection.watch().listen((event) {
-    //   print('event');
-    //   print(event);
-    // });
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -113,17 +179,28 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10.0,
-                  vertical: 20.0,
-                ),
-                itemCount: messageBubbles.length,
-                itemBuilder: (context, index) {
-                  // int index2 = messageBubbles.length - index;
-                  // return messageBubbles[(messageBubbles.length -1) - index];
-                  return messageBubbles.reversed.toList()[index];
+              child: StreamBuilder<List<MessageBubble>>(
+                stream: messagesStream(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  final messageBubbles = snapshot.data;
+
+                  return ListView.builder(
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0,
+                      vertical: 20.0,
+                    ),
+                    itemCount: messageBubbles!.length,
+                    itemBuilder: (context, index) {
+                      return messageBubbles.reversed.toList()[index];
+                    },
+                  );
                 },
               ),
             ),
@@ -169,16 +246,16 @@ class _ChatScreenState extends State<ChatScreen> {
                                   maxLines: null,
                                   onTap: () {},
                                   onChanged: (value) {
-                                    // setState(() {
-                                    //   if (value.trim() !=
-                                    //       '') {
-                                    //     isWriting = true;
-                                    //   } else {
-                                    //     isWriting = false;
-                                    //   }
+                                    setState(() {
+                                      // if (value.trim() !=
+                                      //     '') {
+                                      //   isWriting = true;
+                                      // } else {
+                                      //   isWriting = false;
+                                      // }
 
-                                    //   textMessage = value;
-                                    // });
+                                      textMessage = value;
+                                    });
                                   },
                                   decoration: const InputDecoration(
                                     hintText: 'Type a message',
@@ -191,44 +268,49 @@ class _ChatScreenState extends State<ChatScreen> {
                                   FocusScope.of(context).unfocus();
                                   _messageController.clear();
 
-                                  if (textMessage.isNotEmpty) {
-                                    if (textMessage != ' ') {
-                                      await AppServices().createChat(
-                                        chatOwnerId: box.get('id'),
-                                        userId: widget.userId,
-                                        currentMessage: textMessage,
-                                        username: widget.username,
-                                        email: widget.email,
-                                        profileUrl: null,
-                                      );
-                                      // AppServices().createMessage(
-                                      //   chatId: chatId,
-                                      //   message: textMessage,
-                                      //   senderId: box.get('id'),
-                                      //   receiverId: widget.userId,
-                                      //   senderName: box.get('username'),
-                                      //   receiverName: widget.username,
-                                      //   senderEmail: box.get('email'),
-                                      //   receiverEmail: widget.email,
-                                      // );
+                                  if (textMessage.trim() != '') {
+                                    await AppServices().sendMessages(
+                                      chatId: chatId,
+                                      userId: box.get('id'),
+                                      receiverId: widget.userId,
+                                      message: textMessage,
+                                      seen: false,
+                                    );
+                                    await AppServices().createChat(
+                                      chatOwnerId: box.get('id'),
+                                      userId: widget.userId,
+                                      currentMessage: textMessage,
+                                      username: widget.username,
+                                      email: widget.email,
+                                      profileUrl: null,
+                                    );
+                                    // AppServices().createMessage(
+                                    //   chatId: chatId,
+                                    //   message: textMessage,
+                                    //   senderId: box.get('id'),
+                                    //   receiverId: widget.userId,
+                                    //   senderName: box.get('username'),
+                                    //   receiverName: widget.username,
+                                    //   senderEmail: box.get('email'),
+                                    //   receiverEmail: widget.email,
+                                    // );
 
-                                      // final timeStamp =
-                                      //     DateTime.now().millisecondsSinceEpoch;
-                                      // final collection = client
-                                      //     .getDatabase('hugb-db')
-                                      //     .getCollection('chats');
-                                      // await collection.insertOne(
-                                      //   MongoDocument(
-                                      //     {
-                                      //       'chatOwnerId': '',
-                                      //       'userId': widget.userId,
-                                      //       'currentMessage': textMessage,
-                                      //       'username': widget.username,
-                                      //       'email': widget.email,
-                                      //     },
-                                      //   ),
-                                      // );
-                                    }
+                                    // final timeStamp =
+                                    //     DateTime.now().millisecondsSinceEpoch;
+                                    // final collection = client
+                                    //     .getDatabase('hugb-db')
+                                    //     .getCollection('chats');
+                                    // await collection.insertOne(
+                                    //   MongoDocument(
+                                    //     {
+                                    //       'chatOwnerId': '',
+                                    //       'userId': widget.userId,
+                                    //       'currentMessage': textMessage,
+                                    //       'username': widget.username,
+                                    //       'email': widget.email,
+                                    //     },
+                                    //   ),
+                                    // );
                                   }
                                 },
                                 icon: const Icon(

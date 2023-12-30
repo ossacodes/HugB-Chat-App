@@ -58,8 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String databaseId = DbPaths.database;
   String collectionId = DbPaths.usersCollection;
   final client = Client()
-      .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
-      .setProject('6587168cbc8a1e9b32bb') // Your project ID
+      .setEndpoint(DbPaths.projectEndPoint) // Your Appwrite Endpoint
+      .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
 
   @override
@@ -181,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: FutureBuilder<DocumentList>(
           future: AppServices().getChats(userId: box.get('id'), query: ''),
           builder: (context, snapshot) {
+            print(box.get('id'));
             if (!snapshot.hasData) {
               return ListView.builder(
                 itemCount: 10,
