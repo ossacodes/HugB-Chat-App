@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/config/db_paths.dart';
 // import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
@@ -31,9 +34,10 @@ class _ChatScreenState extends State<ChatScreen> {
   String textMessage = '';
   var box = Hive.box('myData');
   String chatId = '';
+  String? myChatId;
   final client = Client()
       .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
-      .setProject('6587168cbc8a1e9b32bb') // Your project ID
+      .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
   Stream<RealtimeMessage> messageStream = const Stream.empty();
   late RealtimeSubscription subscription;
@@ -60,14 +64,48 @@ class _ChatScreenState extends State<ChatScreen> {
     ]);
 
     subscription.stream.listen((response) {
-      print(response.payload);
       if (response.events
           .contains("databases.*.collections.*.documents.*.update")) {
-        print(response.payload);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {});
+        });
       }
     });
 
+    getMyChatId();
+
     messageStream = subscription.stream;
+  }
+
+  Future getMyChatId() async {
+    final database = Databases(client);
+    final documents = await database.listDocuments(
+      databaseId: DbPaths.database,
+      collectionId: DbPaths.chatsCollection,
+      queries: [
+        Query.equal('userId', box.get('id')),
+      ],
+    );
+
+    if (documents.documents.isEmpty) {
+      myChatId = null;
+    }
+
+    try {
+      myChatId = documents.documents[0].$id;
+
+      await database.updateDocument(
+        databaseId: DbPaths.database,
+        collectionId: DbPaths.chatsCollection,
+        documentId: documents.documents[0].$id,
+        data: {
+          'isTyping': false,
+        },
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print(e);
+    }
   }
 
   Stream<List<MessageBubble>> messagesStream() async* {
@@ -89,6 +127,7 @@ class _ChatScreenState extends State<ChatScreen> {
             message: element.data['message'],
             seen: element.data['seen'],
             time: element.$createdAt,
+            documentID: element.$id,
           ),
         );
       } else if (element.data['senderId'] == widget.userId &&
@@ -99,6 +138,7 @@ class _ChatScreenState extends State<ChatScreen> {
             message: element.data['message'],
             seen: element.data['seen'],
             time: element.$createdAt,
+            documentID: element.$id,
           ),
         );
       }
@@ -112,13 +152,14 @@ class _ChatScreenState extends State<ChatScreen> {
         final payload = data.payload;
         if (payload['senderId'] == box.get('id') &&
             payload['receiverId'] == widget.userId) {
-          // print(data.timestamp);
+          print(payload['\$id']);
           messageBubbles.add(
             MessageBubble(
               isMe: true,
               message: payload['message'],
               seen: payload['seen'],
               time: data.timestamp,
+              documentID: payload['\$id'],
             ),
           );
         } else if (payload['senderId'] == widget.userId &&
@@ -129,6 +170,7 @@ class _ChatScreenState extends State<ChatScreen> {
               message: payload['message'],
               seen: payload['seen'],
               time: data.timestamp,
+              documentID: payload['\$id'],
             ),
           );
         }
@@ -138,11 +180,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // @override
-  // void dispose() {
-  //   super.dispose();
-  //   subscription.close();
-  // }
+  @override
+  void dispose() {
+    super.dispose();
+    getMyChatId();
+    // subscription.close();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -168,12 +211,21 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             const SizedBox(width: 10.0),
-            Text(
-              widget.username,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18.0,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.username,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18.0,
+                  ),
+                ),
+                ActivityWidget(
+                  userId: widget.userId,
+                  docId: widget.docId,
+                ),
+              ],
             ),
           ],
         ),
@@ -274,7 +326,46 @@ class _ChatScreenState extends State<ChatScreen> {
                                         controller: _messageController,
                                         maxLines: null,
                                         onTap: () {},
-                                        onChanged: (value) {
+                                        onChanged: (value) async {
+                                          final database = Databases(client);
+                                          bool isTyping = true;
+                                          if (isTyping) {
+                                            if (myChatId != null) {
+                                              await database.updateDocument(
+                                                databaseId: DbPaths.database,
+                                                collectionId:
+                                                    DbPaths.chatsCollection,
+                                                documentId: myChatId!,
+                                                data: {
+                                                  'isTyping': true,
+                                                },
+                                              );
+                                            }
+                                          }
+
+                                          Timer.periodic(
+                                              const Duration(
+                                                seconds: 5,
+                                              ), (timer) async {
+                                            if (myChatId != null) {
+                                              await database.updateDocument(
+                                                databaseId: DbPaths.database,
+                                                collectionId:
+                                                    DbPaths.chatsCollection,
+                                                documentId: myChatId!,
+                                                data: {
+                                                  'isTyping': false,
+                                                },
+                                              );
+                                            }
+                                            if (mounted) {
+                                              setState(() {
+                                                isTyping = false;
+                                              });
+                                            }
+                                            timer.cancel();
+                                          });
+
                                           setState(() {
                                             // if (value.trim() !=
                                             //     '') {
@@ -377,6 +468,72 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               );
             }),
+      ),
+    );
+  }
+}
+
+class ActivityWidget extends StatefulWidget {
+  const ActivityWidget({
+    super.key,
+    required this.userId,
+    required this.docId,
+  });
+
+  final String userId;
+  final String docId;
+
+  @override
+  State<ActivityWidget> createState() => _ActivityWidgetState();
+}
+
+class _ActivityWidgetState extends State<ActivityWidget> {
+  final client = Client()
+      .setEndpoint('https://exwoo.com/v1')
+      .setProject(DbPaths.project)
+      .setSelfSigned();
+  bool isTyping = false;
+  late RealtimeSubscription subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    final realtime = Realtime(client);
+    subscription = realtime.subscribe([
+      'databases.${DbPaths.database}.collections.${DbPaths.chatsCollection}.documents.${widget.docId}'
+    ]);
+
+    subscription.stream.listen((response) {
+      if (response.events
+          .contains("databases.*.collections.*.documents.*.update")) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final payload = response.payload;
+          if (mounted) {
+            setState(() {
+              isTyping = payload['isTyping'];
+            });
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    subscription.close(); // Cancel the subscription when the widget is disposed
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Visibility(
+      visible: isTyping,
+      child: const Text(
+        'Typing...',
+        style: TextStyle(
+          fontSize: 12.0,
+          color: Colors.blueGrey,
+        ),
       ),
     );
   }

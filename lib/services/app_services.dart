@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 class AppServices {
   final client = Client()
       .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
-      .setProject('6587168cbc8a1e9b32bb') // Your project ID
+      .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
 
   Future createUser(String userId, String username, String email) async {
@@ -300,6 +300,33 @@ class AppServices {
       print(e);
     }
     return doc;
+  }
+
+
+  // get unread message count
+  Future<int> getUnreadMessageCount({
+    required String userId,
+  }) async {
+    final databases = Databases(client);
+    int count = 0;
+
+    try {
+      final document = await databases.listDocuments(
+        databaseId: DbPaths.database,
+        collectionId: DbPaths.messagesCollection,
+        queries: [
+          Query.equal('receiverId', [userId]),
+          Query.equal('seen', [false]),
+        ],
+      );
+
+      count = document.total;
+
+      return count;
+    } on AppwriteException catch (e) {
+      print(e);
+    }
+    return count;
   }
 
   static Future sendNotification({
