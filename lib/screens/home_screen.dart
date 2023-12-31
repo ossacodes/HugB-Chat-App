@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/auth/login_screen.dart';
 import 'package:hugb/config/db_paths.dart';
+import 'package:hugb/screens/widgets/chatTile.dart';
 import 'package:hugb/screens/widgets/search_delegate.dart';
 import 'package:skeleton_animation/skeleton_animation.dart';
 import '../models/chats_model.dart';
@@ -24,37 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final _firebaseMessaging = FirebaseMessaging.instance;
 
-  List<ChatsModel> chats = [
-    ChatsModel(
-      avatar:
-          'https://images.unsplash.com/photo-1681640779209-23a76697fd1e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHx0b3BpYy1mZWVkfDJ8dG93SlpGc2twR2d8fGVufDB8fHx8fA%3D%3D',
-      username: 'Jane Doe',
-      recentMessage: 'Hello',
-      unreadMessagesCount: 2,
-    ),
-    ChatsModel(
-      avatar:
-          'https://images.unsplash.com/photo-1700504312241-d6ef93ce35f1?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHx0b3BpYy1mZWVkfDh8dG93SlpGc2twR2d8fGVufDB8fHx8fA%3D%3D',
-      username: 'John Brad',
-      recentMessage: 'Hi',
-      unreadMessagesCount: 0,
-    ),
-    ChatsModel(
-      avatar:
-          'https://images.unsplash.com/photo-1609505018859-8b7e79ff56c0?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHx0b3BpYy1mZWVkfDV8dG93SlpGc2twR2d8fGVufDB8fHx8fA%3D%3D',
-      username: 'Alice Lane',
-      recentMessage: 'Hello',
-      unreadMessagesCount: 0,
-    ),
-    // Add more chats here...
-  ];
-
-  List<String> users = [
-    'Jane Doe',
-    'John Brad',
-    'Alice Lane',
-  ];
-
   String databaseId = DbPaths.database;
   String collectionId = DbPaths.usersCollection;
   final client = Client()
@@ -62,14 +32,33 @@ class _HomeScreenState extends State<HomeScreen> {
       .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
 
+  
+
   @override
   void initState() {
     super.initState();
     _firebaseMessaging.getToken().then((token) async {
-      print('Device Token FCM: $token');
-      print(box.get('id'));
+      // print('Device Token FCM: $token');
+      // print(box.get('id'));
       final databases = Databases(client);
       try {
+        final realtime = Realtime(client);
+        final subscription = realtime.subscribe([
+          'databases.${DbPaths.database}.collections.${DbPaths.chatsCollection}.documents'
+        ]);
+
+        subscription.stream.listen((response) {
+          if (response.events
+              .contains("databases.*.collections.*.documents.*.update")) {
+            setState(() {});
+          } else if (response.events
+              .contains("databases.*.collections.*.documents.*.delete")) {
+            setState(() {});
+          } else if (response.events
+              .contains("databases.*.collections.*.documents.*.create")) {
+            setState(() {});
+          }
+        });
         await databases.updateDocument(
           databaseId: databaseId,
           collectionId: collectionId,
@@ -83,23 +72,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
   }
-
-  // @override
-  // void initState() {
-  //   super.initState();
-
-  //   final realtime = Realtime(client);
-  //   final subscription = realtime.subscribe(
-  //       ['databases.$databaseId.collections.$collectionId.documents']);
-
-  //   subscription.stream.listen((response) {
-  //     print(response.payload);
-  //     if (response.events
-  //         .contains("databases.*.collections.*.documents.*.update")) {
-  //       print(response.payload);
-  //     }
-  //   });
-  // }
 
   // @override
   // void dispose() {
@@ -211,24 +183,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? ListView.builder(
                     itemCount: usersData.length,
                     itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.person),
-                        ),
-                        title: Text(
-                          usersData[index].data['username'],
-                        ),
-                        onTap: () {
-                          Get.to(
-                            ChatScreen(
-                              username: usersData[index].data['username'],
-                              avatar: '',
-                              userId: usersData[index].data['userId'],
-                              email: usersData[index].data['email'],
-                              docId: usersData[index].$id,
-                            ),
-                          );
-                        },
+                      return ChatTile(
+                        usersData: usersData[index],
                       );
                     },
                   )
@@ -247,3 +203,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+

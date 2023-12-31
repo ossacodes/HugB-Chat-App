@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugb/config/palette.dart';
+import 'package:intl/intl.dart';
 
 class MessageBubble extends StatefulWidget {
   const MessageBubble({
     super.key,
     required this.isMe,
     required this.message,
-    required this.unread,
+    required this.seen,
+    required this.time,
   });
 
   final bool isMe;
   final String message;
-  final bool unread;
+  final bool seen;
+  final String time;
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -74,10 +77,9 @@ class _MessageBubbleState extends State<MessageBubble> {
             height: 5.0,
           ),
           !widget.isMe
-              ? const Text(
-                  '10:00 am',
-                  // DateFormat.jm().format(widget.time.toDate()),
-                  style: TextStyle(
+              ? Text(
+                  DateFormat.jm().format(DateTime.parse(widget.time)),
+                  style: const TextStyle(
                     fontSize: 13.0,
                     color: Colors.grey,
                     fontWeight: FontWeight.bold,
@@ -89,10 +91,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                       : MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
-                      '10:00 am',
-                      // DateFormat.jm().format(widget.time.toDate()),
-                      style: TextStyle(
+                    Text(
+                      DateFormat.jm().format(DateTime.parse(widget.time)),
+                      style: const TextStyle(
                         fontSize: 13.0,
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
@@ -101,15 +102,15 @@ class _MessageBubbleState extends State<MessageBubble> {
                     SizedBox(
                       width: 5.w,
                     ),
-                    widget.unread
-                        ? const Icon(
-                            Icons.check,
-                            color: Colors.grey,
-                            size: 20.0,
-                          )
-                        : Icon(
+                    widget.seen
+                        ? Icon(
                             Icons.done_all,
                             color: Palette.appColor,
+                            size: 20.0,
+                          )
+                        : const Icon(
+                            Icons.check,
+                            color: Colors.grey,
                             size: 20.0,
                           ),
                   ],

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
 import 'package:hugb/config/db_paths.dart';
+import 'package:http/http.dart' as http;
 
 class AppServices {
   final client = Client()
@@ -69,6 +71,8 @@ class AppServices {
     required String receiverId,
     required String message,
     required bool seen,
+    required String notificationToken,
+    required String username,
   }) async {
     final databases = Databases(client);
     final docId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -85,6 +89,15 @@ class AppServices {
           'message': message,
           'seen': seen,
         },
+      );
+
+      await sendNotification(
+        notificationToken: notificationToken,
+        title: username,
+        body: message,
+        peerId: receiverId,
+        currentUserId: userId,
+        msgId: docId,
       );
     } on AppwriteException catch (e) {
       print(e);
@@ -107,7 +120,7 @@ class AppServices {
         collectionId: DbPaths.messagesCollection,
         queries: [
           Query.equal('chatId', [chatId]),
-          Query.equal('senderId', [userId]),
+          // Query.equal('senderId', [userId]),
         ],
       );
 
@@ -264,5 +277,77 @@ class AppServices {
       print(e);
     }
     return docs;
+  }
+
+  //get chat user data
+  Future<Document> getUserData({
+    required String userId,
+  }) async {
+    final databases = Databases(client);
+    late Document doc;
+
+    try {
+      final document = await databases.getDocument(
+        databaseId: DbPaths.database,
+        collectionId: DbPaths.usersCollection,
+        documentId: userId,
+      );
+
+      doc = document;
+
+      return document;
+    } on AppwriteException catch (e) {
+      print(e);
+    }
+    return doc;
+  }
+
+  static Future sendNotification({
+    required String notificationToken,
+    required String title,
+    required String body,
+    required String peerId,
+    required String currentUserId,
+    required String msgId,
+  }) async {
+    try {
+      await http
+          .post(
+            Uri.parse('https://fcm.googleapis.com/fcm/send'),
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+              'Authorization':
+                  'key=AAAAV21eCqs:APA91bE8Wf5RprOXlSs7SL45xGBWFgfmxAy_KqBLgtUqGz-nWmA9JuR2zvL92XuOuekAd2PWsqrYlkE7uLIQNaOMtvB-PPvETuA1Iob6npyXPQan-CToQhQDzY7zi4e5MBv0XJkWQK6U'
+            },
+            body: json.encode({
+              "to": notificationToken,
+              "message": {
+                "token": notificationToken,
+              },
+              "data": {
+                "recipient": peerId,
+                'sender': currentUserId,
+              },
+              "android": {
+                "notification": {
+                  "tag": msgId,
+                },
+              },
+              "apns": {
+                "headers": {
+                  'apns-collapse-id': msgId,
+                },
+              },
+              "notification": {
+                "title": title,
+                "body": body,
+                "android_channel_id": "calls_channel",
+              }
+            }),
+          )
+          .then((value) => print(value.body));
+    } catch (e) {
+      print(e);
+    }
   }
 }

@@ -240,17 +240,19 @@ class _SignupScreenState extends State<SignupScreen> {
                                     password: password,
                                     name: name,
                                   )
-                                      .then((value) async {
+                                      .then((userData) async {
                                     await account
                                         .createEmailSession(
                                             email: email, password: password)
                                         .then((value) async {
                                       await AppServices().createUser(
-                                        value.$id,
+                                        userData.$id,
                                         name!,
                                         email,
                                       );
                                       box.put('id', value.$id);
+                                      box.put('username', name);
+                                      box.put('email', email);
                                       box.put('isLoggedIn', true);
                                       Get.offAll(
                                         const HomeScreen(),

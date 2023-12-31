@@ -182,6 +182,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       );
                                       final user = await account.get();
                                       box.put('id', user.$id);
+                                      box.put('username', user.name);
+                                      box.put('email', user.email);
                                       box.put('isLoggedIn', true);
                                       Get.offAll(
                                         const HomeScreen(),
