@@ -67,7 +67,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.events
           .contains("databases.*.collections.*.documents.*.update")) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          setState(() {});
+          if (mounted) {
+            setState(() {});
+          }
         });
       }
     });
@@ -315,12 +317,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                 color: Colors.grey[200],
                                 child: Row(
                                   children: [
-                                    IconButton(
-                                      onPressed: () {},
-                                      icon: const Icon(
-                                        Icons.emoji_emotions_outlined,
-                                      ),
+                                    const SizedBox(
+                                      width: 10.0,
                                     ),
+                                    // IconButton(
+                                    //   onPressed: () {},
+                                    //   icon: const Icon(
+                                    //     Icons.emoji_emotions_outlined,
+                                    //   ),
+                                    // ),
                                     Flexible(
                                       child: TextField(
                                         controller: _messageController,
@@ -396,6 +401,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                           //   message: textMessage,
                                           //   seen: false,
                                           // );
+
                                           await AppServices().sendMessages(
                                             chatId: chatId,
                                             userId: box.get('id'),
@@ -407,6 +413,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                 .data!
                                                 .data['notificationToken'],
                                           );
+
                                           await AppServices().createChat(
                                             chatOwnerId: box.get('id'),
                                             userId: widget.userId,

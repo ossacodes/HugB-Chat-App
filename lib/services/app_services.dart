@@ -71,7 +71,7 @@ class AppServices {
     required String receiverId,
     required String message,
     required bool seen,
-    required String notificationToken,
+    required String? notificationToken,
     required String username,
   }) async {
     final databases = Databases(client);
@@ -91,14 +91,16 @@ class AppServices {
         },
       );
 
-      await sendNotification(
-        notificationToken: notificationToken,
-        title: username,
-        body: message,
-        peerId: receiverId,
-        currentUserId: userId,
-        msgId: docId,
-      );
+      if (notificationToken != null) {
+        await sendNotification(
+          notificationToken: notificationToken,
+          title: username,
+          body: message,
+          peerId: receiverId,
+          currentUserId: userId,
+          msgId: docId,
+        );
+      }
     } on AppwriteException catch (e) {
       print(e);
     }
@@ -171,6 +173,7 @@ class AppServices {
               'username': username,
               'profileUrl': profileUrl,
               'email': email,
+              'timestamp': int.parse(docId),
             },
           );
         } else {
@@ -185,6 +188,7 @@ class AppServices {
               'username': username,
               'profileUrl': profileUrl,
               'email': email,
+              'timestamp': int.parse(docId),
             },
           );
         }
@@ -267,6 +271,7 @@ class AppServices {
                   'ownerId',
                   [userId],
                 ),
+                Query.orderDesc('timestamp'),
               ],
       );
 
@@ -301,7 +306,6 @@ class AppServices {
     }
     return doc;
   }
-
 
   // get unread message count
   Future<int> getUnreadMessageCount({

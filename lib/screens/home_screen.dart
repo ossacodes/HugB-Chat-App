@@ -153,7 +153,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: FutureBuilder<DocumentList>(
           future: AppServices().getChats(userId: box.get('id'), query: ''),
           builder: (context, snapshot) {
-            print(box.get('id'));
             if (!snapshot.hasData) {
               return ListView.builder(
                 itemCount: 10,
