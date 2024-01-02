@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/config/db_paths.dart';
+import 'package:hugb/screens/call/video_call.dart';
 // import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
 import 'package:hugb/screens/widgets/message_bubble.dart';
 import 'package:hugb/services/app_services.dart';
@@ -182,6 +183,24 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // join Call
+  _joinCall({
+    required String callerId,
+    required String calleeId,
+    dynamic offer,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoCallScreen(
+          callerId: callerId,
+          calleeId: calleeId,
+          offer: offer,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -233,7 +252,36 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Video Call'),
+                    content: const Text('Do you want to start a video call?'),
+                    actions: <Widget>[
+                      TextButton(
+                        child: const Text('Cancel'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      TextButton(
+                        child: const Text('Start'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          // Handle start video call action
+                          _joinCall(
+                            callerId: box.get('id'),
+                            calleeId: widget.userId,
+                          );
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
             icon: const Icon(Icons.video_call),
           ),
           IconButton(

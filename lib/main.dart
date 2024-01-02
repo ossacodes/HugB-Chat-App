@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:appwrite/appwrite.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/screens/wrapper/wrapper.dart';
+import 'package:hugb/services/signalling.service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'firebase_options.dart';
 
@@ -26,16 +28,25 @@ void main() async {
       .setProject('6587168cbc8a1e9b32bb')
       .setSelfSigned(status: true);
   runApp(
-    const MyApp(),
+    MyApp(),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
+
+  final box = Hive.box('myData');
+
+
+
+  // generate callerID of local user
+  final String selfCallerID =
+      Random().nextInt(999999).toString().padLeft(6, '0');
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+
     return ScreenUtilInit(
       designSize: const Size(428, 926),
       minTextAdapt: true,

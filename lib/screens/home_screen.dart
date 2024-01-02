@@ -11,6 +11,8 @@ import 'package:hugb/screens/widgets/search_delegate.dart';
 import 'package:skeleton_animation/skeleton_animation.dart';
 import '../models/chats_model.dart';
 import '../services/app_services.dart';
+import '../services/signalling.service.dart';
+import 'call/video_call.dart';
 import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,8 +24,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   var box = Hive.box('myData');
-
+  // signalling server url
+  final String websocketUrl = "https://websocket-server.fly.dev/";
   final _firebaseMessaging = FirebaseMessaging.instance;
+  dynamic incomingSDPOffer;
 
   String databaseId = DbPaths.database;
   String collectionId = DbPaths.usersCollection;
@@ -32,17 +36,21 @@ class _HomeScreenState extends State<HomeScreen> {
       .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
 
-  
-
   @override
   void initState() {
     super.initState();
+    // init signalling service
+    SignallingService.instance.init(
+      websocketUrl: websocketUrl,
+      selfCallerID: box.get('id'),
+    );
+    final databases = Databases(client);
+    final realtime = Realtime(client);
     _firebaseMessaging.getToken().then((token) async {
       // print('Device Token FCM: $token');
       // print(box.get('id'));
-      final databases = Databases(client);
+
       try {
-        final realtime = Realtime(client);
         final subscription = realtime.subscribe([
           'databases.${DbPaths.database}.collections.${DbPaths.chatsCollection}.documents'
         ]);
@@ -71,6 +79,42 @@ class _HomeScreenState extends State<HomeScreen> {
         print(e);
       }
     });
+
+    // listen for incoming video call
+    final subscription = realtime.subscribe([
+      'databases.$databaseId.collections.${DbPaths.makeCallCollection}.documents'
+    ]);
+
+    subscription.stream.listen((response) {
+      // print(response.payload);
+      if (response.events
+          .contains("databases.*.collections.*.documents.*.create")) {
+        // print(response.payload);
+        final data = response.payload;
+        if (mounted) {
+          // set SDP Offer of incoming call
+          setState(() => incomingSDPOffer = data);
+        }
+      }
+    });
+  }
+
+  // join Call
+  _joinCall({
+    required String callerId,
+    required String calleeId,
+    dynamic offer,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoCallScreen(
+          callerId: callerId,
+          calleeId: calleeId,
+          offer: offer,
+        ),
+      ),
+    );
   }
 
   // @override
@@ -87,15 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        // leading: const Padding(
-        //   padding: EdgeInsets.all(8.0),
-        //   child: CircleAvatar(
-        //     radius: 10,
-        //     child: Icon(
-        //       Icons.person,
-        //     ),
-        //   ),
-        // ),
         title: const Text(
           'HugB Chats',
           style: TextStyle(
@@ -105,22 +140,65 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             onPressed: () async {
-              // await AppServices()
-              //     .createUser('2131313', '32ed', 'sdcdcs@gmail.com');
-              print('added');
-              showSearch(
-                context: context,
-                delegate: UserSearchDelegate(),
+              Get.snackbar(
+                '',
+                '',
+                titleText: const SizedBox(),
+                messageText: ListTile(
+                  leading: const CircleAvatar(
+                    radius: 28,
+                    child: Icon(
+                      Icons.person,
+                      size: 30,
+                    ),
+                  ),
+                  title: const Text(
+                    'Call From Jake',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Calling...',
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  ),
+                  trailing: Wrap(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Get.back();
+                        },
+                        icon: const Icon(
+                          Icons.call_end,
+                          color: Colors.red,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(
+                          Icons.call,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                ),
+                maxWidth: Get.width * 0.9,
+                backgroundColor: Colors.black.withOpacity(0.7),
+                borderRadius: 20,
+                colorText: Colors.white,
+                duration: const Duration(
+                  seconds: 10,
+                ),
               );
-              // final collection =
-              //     client.getDatabase('hugb-db').getCollection('users');
-              // await collection.insertOne(
-              //   MongoDocument(
-              //     {
-              //       'username': 'ossama',
-              //       'email': 'ossama@gmail.com',
-              //     },
-              //   ),
+              // showSearch(
+              //   context: context,
+              //   delegate: UserSearchDelegate(),
               // );
             },
             icon: const Icon(Icons.search),
@@ -149,58 +227,94 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: FutureBuilder<DocumentList>(
-          future: AppServices().getChats(userId: box.get('id'), query: ''),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return ListView.builder(
-                itemCount: 10,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    tileColor: Colors.transparent,
-                    leading: Skeleton(
-                      width: 50,
-                      height: 50,
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    title: Skeleton(
-                      width: 100,
-                      height: 20,
-                    ),
-                    onTap: () {
-                      // Handle user tap
-                    },
-                  );
-                },
-              );
-            }
-
-            final usersData = snapshot.data!.documents;
-
-            return usersData.isNotEmpty
-                ? ListView.builder(
-                    itemCount: usersData.length,
+      body: Stack(
+        children: [
+          Center(
+            child: FutureBuilder<DocumentList>(
+              future: AppServices().getChats(userId: box.get('id'), query: ''),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return ListView.builder(
+                    itemCount: 10,
                     itemBuilder: (context, index) {
-                      return ChatTile(
-                        usersData: usersData[index],
+                      return ListTile(
+                        tileColor: Colors.transparent,
+                        leading: Skeleton(
+                          width: 50,
+                          height: 50,
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        title: Skeleton(
+                          width: 100,
+                          height: 20,
+                        ),
+                        onTap: () {
+                          // Handle user tap
+                        },
                       );
                     },
-                  )
-                : const Center(
-                    child: Text(
-                      'No chats yet',
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blueGrey),
-                    ),
                   );
-          },
-        ),
+                }
+
+                final usersData = snapshot.data!.documents;
+
+                return usersData.isNotEmpty
+                    ? ListView.builder(
+                        itemCount: usersData.length,
+                        itemBuilder: (context, index) {
+                          return ChatTile(
+                            usersData: usersData[index],
+                          );
+                        },
+                      )
+                    : const Center(
+                        child: Text(
+                          'No chats yet',
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueGrey),
+                        ),
+                      );
+              },
+            ),
+          ),
+          if (incomingSDPOffer != null)
+            Positioned(
+              child: ListTile(
+                title: Text(
+                  "Incoming Call from ${incomingSDPOffer["calleeId"]}",
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.call_end),
+                      color: Colors.redAccent,
+                      onPressed: () {
+                        setState(() => incomingSDPOffer = null);
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.call),
+                      color: Colors.greenAccent,
+                      onPressed: () {
+                        _joinCall(
+                          callerId: incomingSDPOffer["calleeId"]!,
+                          calleeId: box.get('id'),
+                          offer: {
+                            "sdp": incomingSDPOffer["sdp"],
+                            "type": incomingSDPOffer["type"],
+                          },
+                        );
+                      },
+                    )
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
-
-
