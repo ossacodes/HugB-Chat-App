@@ -1,8 +1,9 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:hive/hive.dart';
+import 'package:hugb/config/db_paths.dart';
 import 'package:hugb/services/signalling.service.dart';
-
 
 class AudioCallScreen extends StatefulWidget {
   final String callerId, calleeId;
@@ -21,8 +22,10 @@ class AudioCallScreen extends StatefulWidget {
 class _AudioCallScreenState extends State<AudioCallScreen> {
   final client = Client()
       .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
-      .setProject('6587168cbc8a1e9b32bb') // Your project ID
+      .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
+  var box = Hive.box('myData');
+  final String websocketUrl = "https://websocket-server.fly.dev/";
 
   final String roomCollection = '658cc51add6d6041542c';
   final String databaseId = '658719d096c0de092236';
@@ -51,17 +54,20 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
   // media status
   bool isAudioOn = true, isVideoOn = true, isFrontCameraSelected = true;
 
-  bool _isHD = false;
-
   @override
   void initState() {
+    // init signalling service
+    SignallingService.instance.init(
+      websocketUrl: websocketUrl,
+      selfCallerID: box.get('id'),
+    );
     // initializing renderers
     _localRTCVideoRenderer.initialize();
     _remoteRTCVideoRenderer.initialize();
 
     // setup Peer Connection
     _setupPeerConnection();
-        // enable or disable video track
+    // enable or disable video track
     _localStream?.getVideoTracks().forEach((track) {
       track.enabled = false;
     });
@@ -116,7 +122,6 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
 
     // for Incoming call
     if (widget.offer != null) {
-
       // listen for Remote IceCandidate
       socket!.on("IceCandidate", (data) {
         String candidate = data["iceCandidate"]["candidate"];
@@ -223,7 +228,6 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
       // });
     }
   }
-
 
   _leaveCall() {
     Navigator.pop(context);

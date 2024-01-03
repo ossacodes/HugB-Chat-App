@@ -94,7 +94,107 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           // set SDP Offer of incoming call
           setState(() => incomingSDPOffer = data);
+
+          if (incomingSDPOffer["calleeId"] != box.get('id')) {
+            Get.snackbar(
+              '',
+              '',
+              titleText: const SizedBox(),
+              messageText: FutureBuilder(
+                  future: AppServices().getUserData(
+                    userId: incomingSDPOffer["calleeId"],
+                  ),
+                  builder: (context, userSnapshot) {
+                    if (!userSnapshot.hasData) {
+                      return Center(
+                        child: Skeleton(
+                          width: 100,
+                          height: 20,
+                        ),
+                      );
+                    }
+                    return ListTile(
+                      leading: const CircleAvatar(
+                        radius: 28,
+                        child: Icon(
+                          Icons.person,
+                          size: 30,
+                        ),
+                      ),
+                      title: Text(
+                        '${userSnapshot.data!.data['username']}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Incoming Call...',
+                        style: TextStyle(fontSize: 14, color: Colors.white),
+                      ),
+                      trailing: Wrap(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.red,
+                            child: IconButton(
+                              onPressed: () {
+                                setState(() => incomingSDPOffer = null);
+                                Get.back();
+                              },
+                              icon: const Icon(
+                                Icons.call_end,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 10,
+                          ),
+                          CircleAvatar(
+                            backgroundColor: Colors.green,
+                            child: IconButton(
+                              onPressed: () {
+                                _joinCall(
+                                  callerId: incomingSDPOffer["calleeId"]!,
+                                  calleeId: box.get('id'),
+                                  // offer: incomingSDPOffer["sdpOffer"],
+                                  offer: {
+                                    "sdp": incomingSDPOffer["sdp"],
+                                    "type": incomingSDPOffer["type"],
+                                  },
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.call,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+              padding: const EdgeInsets.symmetric(
+                vertical: 10,
+              ),
+              // maxWidth: Get.width * 0.9,
+              backgroundColor: Colors.black.withOpacity(0.7),
+              borderRadius: 20,
+              colorText: Colors.white,
+              duration: const Duration(
+                seconds: 10,
+              ),
+            );
+          }
         }
+      }
+    });
+
+    SignallingService.instance.socket!.on("newCall", (data) {
+      if (mounted) {
+        // set SDP Offer of incoming call
+        setState(() => incomingSDPOffer = data);
       }
     });
   }
@@ -140,62 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             onPressed: () async {
-              Get.snackbar(
-                '',
-                '',
-                titleText: const SizedBox(),
-                messageText: ListTile(
-                  leading: const CircleAvatar(
-                    radius: 28,
-                    child: Icon(
-                      Icons.person,
-                      size: 30,
-                    ),
-                  ),
-                  title: const Text(
-                    'Call From Jake',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'Calling...',
-                    style: TextStyle(fontSize: 14, color: Colors.white),
-                  ),
-                  trailing: Wrap(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          Get.back();
-                        },
-                        icon: const Icon(
-                          Icons.call_end,
-                          color: Colors.red,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.call,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                ),
-                maxWidth: Get.width * 0.9,
-                backgroundColor: Colors.black.withOpacity(0.7),
-                borderRadius: 20,
-                colorText: Colors.white,
-                duration: const Duration(
-                  seconds: 10,
-                ),
-              );
               // showSearch(
               //   context: context,
               //   delegate: UserSearchDelegate(),
@@ -279,40 +323,41 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          if (incomingSDPOffer != null)
-            Positioned(
-              child: ListTile(
-                title: Text(
-                  "Incoming Call from ${incomingSDPOffer["calleeId"]}",
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.call_end),
-                      color: Colors.redAccent,
-                      onPressed: () {
-                        setState(() => incomingSDPOffer = null);
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.call),
-                      color: Colors.greenAccent,
-                      onPressed: () {
-                        _joinCall(
-                          callerId: incomingSDPOffer["calleeId"]!,
-                          calleeId: box.get('id'),
-                          offer: {
-                            "sdp": incomingSDPOffer["sdp"],
-                            "type": incomingSDPOffer["type"],
-                          },
-                        );
-                      },
-                    )
-                  ],
-                ),
-              ),
-            ),
+          // if (incomingSDPOffer != null)
+          //   Positioned(
+          //     child: ListTile(
+          //       title: Text(
+          //         "Incoming Call from ${incomingSDPOffer["callerId"]}",
+          //       ),
+          //       trailing: Row(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: [
+          //           IconButton(
+          //             icon: const Icon(Icons.call_end),
+          //             color: Colors.redAccent,
+          //             onPressed: () {
+          //               setState(() => incomingSDPOffer = null);
+          //             },
+          //           ),
+          //           IconButton(
+          //             icon: const Icon(Icons.call),
+          //             color: Colors.greenAccent,
+          //             onPressed: () {
+          //               _joinCall(
+          //                 callerId: incomingSDPOffer["callerId"]!,
+          //                 calleeId: box.get('id'),
+          //                 offer: incomingSDPOffer["sdpOffer"],
+          //                 // offer: {
+          //                 //   "sdp": incomingSDPOffer["sdp"],
+          //                 //   "type": incomingSDPOffer["type"],
+          //                 // },
+          //               );
+          //             },
+          //           )
+          //         ],
+          //       ),
+          //     ),
+          //   ),
         ],
       ),
     );

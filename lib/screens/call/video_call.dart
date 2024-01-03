@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:hugb/config/db_paths.dart';
 import 'package:hugb/services/signalling.service.dart';
 
 enum Resolution { SD, HD }
@@ -22,7 +23,7 @@ class VideoCallScreen extends StatefulWidget {
 class _CallScreenState extends State<VideoCallScreen> {
   final client = Client()
       .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
-      .setProject('6587168cbc8a1e9b32bb') // Your project ID
+      .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
 
   final String roomCollection = '658cc51add6d6041542c';
@@ -140,12 +141,14 @@ class _CallScreenState extends State<VideoCallScreen> {
         String sdpMid = data["iceCandidate"]["id"];
         int sdpMLineIndex = data["iceCandidate"]["label"];
 
-        // add iceCandidate
-        _rtcPeerConnection!.addCandidate(RTCIceCandidate(
-          candidate,
-          sdpMid,
-          sdpMLineIndex,
-        ));
+        if (data['sender'] == widget.callerId) {
+          // add iceCandidate
+          _rtcPeerConnection!.addCandidate(RTCIceCandidate(
+            candidate,
+            sdpMid,
+            sdpMLineIndex,
+          ));
+        }
       });
 
       // set SDP offer as remoteDescription for peerConnection
@@ -378,11 +381,14 @@ class _CallScreenState extends State<VideoCallScreen> {
                       border: Border.all(color: Colors.white),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: RTCVideoView(
-                      _localRTCVideoRenderer,
-                      mirror: isFrontCameraSelected,
-                      objectFit:
-                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: RTCVideoView(
+                        _localRTCVideoRenderer,
+                        mirror: isFrontCameraSelected,
+                        objectFit:
+                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      ),
                     ),
                   ),
                 )
