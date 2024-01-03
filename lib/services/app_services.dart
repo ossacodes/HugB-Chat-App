@@ -3,10 +3,11 @@ import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
 import 'package:hugb/config/db_paths.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 class AppServices {
   final client = Client()
-      .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
+      .setEndpoint(DbPaths.projectEndPoint) // Your Appwrite Endpoint
       .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
 
@@ -331,6 +332,55 @@ class AppServices {
       print(e);
     }
     return count;
+  }
+
+// send call wake notification
+  static Future sendCallWake({
+    required String notificationToken,
+    required String title,
+    required String body,
+    // required String peerNo,
+    // required String currentUserNo,
+    required String username,
+    required String profileUrl,
+    required String id,
+    required String type,
+  }) async {
+    var uuid = const Uuid();
+    try {
+      await http
+          .post(
+            Uri.parse('https://fcm.googleapis.com/fcm/send'),
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+              'Authorization':
+                  'key=AAAAV21eCqs:APA91bE8Wf5RprOXlSs7SL45xGBWFgfmxAy_KqBLgtUqGz-nWmA9JuR2zvL92XuOuekAd2PWsqrYlkE7uLIQNaOMtvB-PPvETuA1Iob6npyXPQan-CToQhQDzY7zi4e5MBv0XJkWQK6U'
+            },
+            body: json.encode({
+              "to": notificationToken,
+              "message": {
+                "token": notificationToken,
+              },
+              "data": {
+                "uuid": uuid.v4(),
+                "caller_id": id,
+                "caller_name": username,
+                "caller_id_type": id,
+                'call_image': profileUrl,
+                "type": type,
+              },
+              "android": {"priority": "high"},
+              "notification": {
+                "title": title,
+                "body": body,
+                // "android_channel_id": "high_importance_channel",
+              }
+            }),
+          )
+          .then((value) => print(value.body));
+    } catch (e) {
+      print(e);
+    }
   }
 
   static Future sendNotification({

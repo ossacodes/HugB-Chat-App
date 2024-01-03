@@ -22,7 +22,7 @@ class VideoCallScreen extends StatefulWidget {
 
 class _CallScreenState extends State<VideoCallScreen> {
   final client = Client()
-      .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
+      .setEndpoint(DbPaths.projectEndPoint) // Your Appwrite Endpoint
       .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
 
@@ -279,6 +279,8 @@ class _CallScreenState extends State<VideoCallScreen> {
           "calleeId": widget.callerId,
           'sdp': offer.sdp,
           'type': offer.type,
+          'call_type': 'video_call',
+          'timestamp': uniqueId,
         },
       );
       // socket!.emit('makeCall', {
@@ -292,14 +294,6 @@ class _CallScreenState extends State<VideoCallScreen> {
     // Get your MediaStream here
 
     _localStream!.getVideoTracks().forEach((track) {
-      // track.applyConstraints({
-      //   'mandatory': {
-      //     'minWidth': resolution == Resolution.HD ? '1280' : '640',
-      //     'minHeight': resolution == Resolution.HD ? '720' : '480',
-      //     'minFrameRate': '30',
-      //   },
-      //   'facingMode': 'user'
-      // });
       track.applyConstraints({
         'audio': true,
         'video': {
@@ -311,7 +305,19 @@ class _CallScreenState extends State<VideoCallScreen> {
     });
   }
 
-  _leaveCall() {
+  _leaveCall() async {
+    try {
+      await _rtcPeerConnection!.close();
+      await _localRTCVideoRenderer.dispose();
+      await _remoteRTCVideoRenderer.dispose();
+      await _localStream?.dispose();
+      await _rtcPeerConnection?.dispose();
+    } catch (e) {
+      // Handle any errors here
+    } finally {
+      _localStream = null;
+      _rtcPeerConnection = null;
+    }
     Navigator.pop(context);
   }
 
@@ -436,12 +442,21 @@ class _CallScreenState extends State<VideoCallScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _localRTCVideoRenderer.dispose();
-    _remoteRTCVideoRenderer.dispose();
-    _localStream?.dispose();
-    _rtcPeerConnection?.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() async {
+  //   try {
+  //     await _rtcPeerConnection!.close();
+  //     await _localRTCVideoRenderer.dispose();
+  //     await _remoteRTCVideoRenderer.dispose();
+  //     await _localStream?.dispose();
+  //     await _rtcPeerConnection?.dispose();
+  //   } catch (e) {
+  //     // Handle any errors here
+  //   } finally {
+  //     _localStream = null;
+  //     _rtcPeerConnection = null;
+  //   }
+
+  //   super.dispose();
+  // }
 }

@@ -21,7 +21,7 @@ class AudioCallScreen extends StatefulWidget {
 
 class _AudioCallScreenState extends State<AudioCallScreen> {
   final client = Client()
-      .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
+      .setEndpoint(DbPaths.projectEndPoint) // Your Appwrite Endpoint
       .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
   var box = Hive.box('myData');
@@ -69,7 +69,7 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
     _setupPeerConnection();
     // enable or disable video track
     _localStream?.getVideoTracks().forEach((track) {
-      track.enabled = false;
+      track.enabled = true;
     });
     super.initState();
   }
@@ -181,13 +181,18 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
             .contains("databases.*.collections.*.documents.*.create")) {
           // print(response.payload);
           final data = response.payload;
-          // set SDP answer as remoteDescription for peerConnection
-          await _rtcPeerConnection!.setRemoteDescription(
-            RTCSessionDescription(
-              data["sdp"],
-              data["type"],
-            ),
-          );
+
+          try {
+            // set SDP answer as remoteDescription for peerConnection
+            await _rtcPeerConnection!.setRemoteDescription(
+              RTCSessionDescription(
+                data["sdp"],
+                data["type"],
+              ),
+            );
+          } catch (e) {
+            print(e);
+          }
 
           // send iceCandidate generated to remote peer over signalling
           for (RTCIceCandidate candidate in rtcIceCadidates) {
@@ -220,6 +225,8 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
           "calleeId": widget.callerId,
           'sdp': offer.sdp,
           'type': offer.type,
+          'call_type': 'audio_call',
+          'timestamp': uniqueId,
         },
       );
       // socket!.emit('makeCall', {
@@ -276,27 +283,64 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
                 Positioned.fill(
                   child: Container(
                     color: Colors.black,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        const CircleAvatar(
+                          radius: 50.0,
+                          child: Icon(
+                            Icons.person,
+                            size: 50,
+                          ), // Replace with the caller's profile picture URL
+                        ),
+                        const SizedBox(height: 20.0),
+                        const Text(
+                          'Caller Name', // Replace with the caller's name
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 50.0),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: <Widget>[
+                            IconButton(
+                              icon: Icon(isAudioOn ? Icons.mic : Icons.mic_off,
+                                  color: Colors.white),
+                              onPressed: _toggleMic,
+                            ),
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.call_end, color: Colors.red),
+                              onPressed: _leaveCall,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ]),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  IconButton(
-                    icon: Icon(isAudioOn ? Icons.mic : Icons.mic_off),
-                    onPressed: _toggleMic,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.call_end),
-                    iconSize: 30,
-                    onPressed: _leaveCall,
-                  ),
-                ],
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(vertical: 12),
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+            //     children: [
+            //       IconButton(
+            //         icon: Icon(isAudioOn ? Icons.mic : Icons.mic_off),
+            //         onPressed: _toggleMic,
+            //       ),
+            //       IconButton(
+            //         icon: const Icon(Icons.call_end),
+            //         iconSize: 30,
+            //         onPressed: _leaveCall,
+            //       ),
+            //     ],
+            //   ),
+            // ),
           ],
         ),
       ),

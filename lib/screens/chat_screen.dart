@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/config/db_paths.dart';
+import 'package:hugb/screens/call/audio_call.dart';
 import 'package:hugb/screens/call/video_call.dart';
 // import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
 import 'package:hugb/screens/widgets/message_bubble.dart';
@@ -37,7 +38,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String chatId = '';
   String? myChatId;
   final client = Client()
-      .setEndpoint('https://exwoo.com/v1') // Your Appwrite Endpoint
+      .setEndpoint(DbPaths.projectEndPoint) // Your Appwrite Endpoint
       .setProject(DbPaths.project) // Your project ID
       .setSelfSigned();
   Stream<RealtimeMessage> messageStream = const Stream.empty();
@@ -201,6 +202,24 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  // Join Audio Call
+  _joinAudioCall({
+    required String callerId,
+    required String calleeId,
+    dynamic offer,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AudioCallScreen(
+          callerId: callerId,
+          calleeId: calleeId,
+          offer: offer,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -210,102 +229,150 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-              },
-              child: const Icon(
-                Icons.arrow_back_ios,
-              ),
-            ),
-            const SizedBox(width: 10.0),
-            const CircleAvatar(
-              radius: 20,
-              child: Icon(
-                Icons.person,
-                size: 25,
-              ),
-            ),
-            const SizedBox(width: 10.0),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.username,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18.0,
+    return FutureBuilder(
+        future: AppServices().getUserData(
+          userId: widget.userId,
+        ),
+        builder: (context, userSnapshot) {
+          return Scaffold(
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              title: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Icon(
+                      Icons.arrow_back_ios,
+                    ),
                   ),
+                  const SizedBox(width: 10.0),
+                  const CircleAvatar(
+                    radius: 20,
+                    child: Icon(
+                      Icons.person,
+                      size: 25,
+                    ),
+                  ),
+                  const SizedBox(width: 10.0),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.username,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18.0,
+                        ),
+                      ),
+                      ActivityWidget(
+                        userId: widget.userId,
+                        docId: widget.docId,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Video Call'),
+                          content:
+                              const Text('Do you want to start a video call?'),
+                          actions: <Widget>[
+                            TextButton(
+                              child: const Text('Cancel'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('Start'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                // Handle start video call action
+                                AppServices.sendCallWake(
+                                  title: '${box.get('username')} is calling',
+                                  body: 'Tap to join the call',
+                                  id: box.get('id'),
+                                  notificationToken: userSnapshot
+                                      .data!.data['notificationToken'],
+                                  profileUrl: '',
+                                  type: 'video_call',
+                                  username: box.get('username'),
+                                );
+                                _joinCall(
+                                  callerId: box.get('id'),
+                                  calleeId: widget.userId,
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.video_call),
                 ),
-                ActivityWidget(
-                  userId: widget.userId,
-                  docId: widget.docId,
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Video Call'),
+                          content:
+                              const Text('Do you want to start a video call?'),
+                          actions: <Widget>[
+                            TextButton(
+                              child: const Text('Cancel'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('Start'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                // Handle start video call action
+
+                                _joinAudioCall(
+                                  callerId: box.get('id'),
+                                  calleeId: widget.userId,
+                                );
+
+                                AppServices.sendCallWake(
+                                  title: '${box.get('username')} is calling',
+                                  body: 'Tap to join the call',
+                                  id: box.get('id'),
+                                  notificationToken: userSnapshot
+                                      .data!.data['notificationToken'],
+                                  profileUrl: '',
+                                  type: 'audio_call',
+                                  username: box.get('username'),
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.call),
+                ),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.more_vert),
                 ),
               ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Video Call'),
-                    content: const Text('Do you want to start a video call?'),
-                    actions: <Widget>[
-                      TextButton(
-                        child: const Text('Cancel'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      TextButton(
-                        child: const Text('Start'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          // Handle start video call action
-                          _joinCall(
-                            callerId: box.get('id'),
-                            calleeId: widget.userId,
-                          );
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-            icon: const Icon(Icons.video_call),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.call),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.more_vert),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: FutureBuilder(
-            future: AppServices().getUserData(
-              userId: widget.userId,
-            ),
-            builder: (context, userSnapshot) {
-              // if (!userSnapshot.hasData) {
-              //   return const Center(
-              //     child: CircularProgressIndicator(),
-              //   );
-              // }
-              return Column(
+            body: SafeArea(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -521,10 +588,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   )
                 ],
-              );
-            }),
-      ),
-    );
+              ),
+            ),
+          );
+        });
   }
 }
 

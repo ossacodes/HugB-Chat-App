@@ -2,12 +2,15 @@ import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/auth/login_screen.dart';
 import 'package:hugb/config/db_paths.dart';
+import 'package:hugb/screens/call/audio_call.dart';
 import 'package:hugb/screens/widgets/chatTile.dart';
 import 'package:hugb/screens/widgets/search_delegate.dart';
+import 'package:hugb/services/call_service.dart';
 import 'package:skeleton_animation/skeleton_animation.dart';
 import '../models/chats_model.dart';
 import '../services/app_services.dart';
@@ -37,6 +40,17 @@ class _HomeScreenState extends State<HomeScreen> {
       .setSelfSigned();
 
   @override
+  void didChangeDependencies() async {
+    super.didChangeDependencies();
+    await FlutterCallkitIncoming.requestNotificationPermission({
+      "rationaleMessagePermission":
+          "Notification permission is required, to show notification.",
+      "postNotificationMessageRequired":
+          "Notification permission is required, Please allow notification permission from setting."
+    });
+  }
+
+  @override
   void initState() {
     super.initState();
     // init signalling service
@@ -44,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
       websocketUrl: websocketUrl,
       selfCallerID: box.get('id'),
     );
+    CallService().listenToCallEvents();
     final databases = Databases(client);
     final realtime = Realtime(client);
     _firebaseMessaging.getToken().then((token) async {
@@ -100,6 +115,9 @@ class _HomeScreenState extends State<HomeScreen> {
               '',
               '',
               titleText: const SizedBox(),
+              animationDuration: const Duration(
+                milliseconds: 200,
+              ),
               messageText: FutureBuilder(
                   future: AppServices().getUserData(
                     userId: incomingSDPOffer["calleeId"],
@@ -155,15 +173,29 @@ class _HomeScreenState extends State<HomeScreen> {
                             backgroundColor: Colors.green,
                             child: IconButton(
                               onPressed: () {
-                                _joinCall(
-                                  callerId: incomingSDPOffer["calleeId"]!,
-                                  calleeId: box.get('id'),
-                                  // offer: incomingSDPOffer["sdpOffer"],
-                                  offer: {
-                                    "sdp": incomingSDPOffer["sdp"],
-                                    "type": incomingSDPOffer["type"],
-                                  },
-                                );
+                                Get.back();
+                                if (incomingSDPOffer['call_type'] ==
+                                    'audio_call') {
+                                  _joinAudioCall(
+                                    callerId: incomingSDPOffer["calleeId"]!,
+                                    calleeId: box.get('id'),
+                                    // offer: incomingSDPOffer["sdpOffer"],
+                                    offer: {
+                                      "sdp": incomingSDPOffer["sdp"],
+                                      "type": incomingSDPOffer["type"],
+                                    },
+                                  );
+                                } else {
+                                  _joinCall(
+                                    callerId: incomingSDPOffer["calleeId"]!,
+                                    calleeId: box.get('id'),
+                                    // offer: incomingSDPOffer["sdpOffer"],
+                                    offer: {
+                                      "sdp": incomingSDPOffer["sdp"],
+                                      "type": incomingSDPOffer["type"],
+                                    },
+                                  );
+                                }
                               },
                               icon: const Icon(
                                 Icons.call,
@@ -199,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // join Call
+  // Join Audio Call
   _joinCall({
     required String callerId,
     required String calleeId,
@@ -209,6 +241,24 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => VideoCallScreen(
+          callerId: callerId,
+          calleeId: calleeId,
+          offer: offer,
+        ),
+      ),
+    );
+  }
+
+  // Join Audio Call
+  _joinAudioCall({
+    required String callerId,
+    required String calleeId,
+    dynamic offer,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AudioCallScreen(
           callerId: callerId,
           calleeId: calleeId,
           offer: offer,
@@ -240,10 +290,10 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             onPressed: () async {
-              // showSearch(
-              //   context: context,
-              //   delegate: UserSearchDelegate(),
-              // );
+              showSearch(
+                context: context,
+                delegate: UserSearchDelegate(),
+              );
             },
             icon: const Icon(Icons.search),
           ),
