@@ -11,7 +11,6 @@ import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/config/db_paths.dart';
 import 'package:hugb/screens/wrapper/wrapper.dart';
-import 'package:hugb/services/signalling.service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'firebase_options.dart';
 import 'services/call_service.dart';

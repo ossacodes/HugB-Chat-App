@@ -12,11 +12,9 @@ import 'package:hugb/screens/widgets/chatTile.dart';
 import 'package:hugb/screens/widgets/search_delegate.dart';
 import 'package:hugb/services/call_service.dart';
 import 'package:skeleton_animation/skeleton_animation.dart';
-import '../models/chats_model.dart';
 import '../services/app_services.dart';
 import '../services/signalling.service.dart';
 import 'call/video_call.dart';
-import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -96,137 +94,247 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // listen for incoming video call
-    final subscription = realtime.subscribe([
-      'databases.$databaseId.collections.${DbPaths.makeCallCollection}.documents'
-    ]);
+    // final subscription = realtime.subscribe([
+    //   'databases.$databaseId.collections.${DbPaths.makeCallCollection}.documents'
+    // ]);
 
-    subscription.stream.listen((response) {
-      // print(response.payload);
-      if (response.events
-          .contains("databases.*.collections.*.documents.*.create")) {
-        // print(response.payload);
-        final data = response.payload;
-        if (mounted) {
-          // set SDP Offer of incoming call
-          setState(() => incomingSDPOffer = data);
+    // subscription.stream.listen((response) {
+    //   // print(response.payload);
+    //   if (response.events
+    //       .contains("databases.*.collections.*.documents.*.create")) {
+    //     // print(response.payload);
+    //     final data = response.payload;
+    //     if (mounted) {
+    //       // set SDP Offer of incoming call
+    //       setState(() => incomingSDPOffer = data);
 
-          if (incomingSDPOffer["calleeId"] != box.get('id')) {
-            Get.snackbar(
-              '',
-              '',
-              titleText: const SizedBox(),
-              animationDuration: const Duration(
-                milliseconds: 200,
-              ),
-              messageText: FutureBuilder(
-                  future: AppServices().getUserData(
-                    userId: incomingSDPOffer["calleeId"],
-                  ),
-                  builder: (context, userSnapshot) {
-                    if (!userSnapshot.hasData) {
-                      return Center(
-                        child: Skeleton(
-                          width: 100,
-                          height: 20,
-                        ),
-                      );
-                    }
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        radius: 28,
-                        child: Icon(
-                          Icons.person,
-                          size: 30,
-                        ),
-                      ),
-                      title: Text(
-                        '${userSnapshot.data!.data['username']}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      subtitle: const Text(
-                        'Incoming Call...',
-                        style: TextStyle(fontSize: 14, color: Colors.white),
-                      ),
-                      trailing: Wrap(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.red,
-                            child: IconButton(
-                              onPressed: () {
-                                setState(() => incomingSDPOffer = null);
-                                Get.back();
-                              },
-                              icon: const Icon(
-                                Icons.call_end,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          CircleAvatar(
-                            backgroundColor: Colors.green,
-                            child: IconButton(
-                              onPressed: () {
-                                Get.back();
-                                if (incomingSDPOffer['call_type'] ==
-                                    'audio_call') {
-                                  _joinAudioCall(
-                                    callerId: incomingSDPOffer["calleeId"]!,
-                                    calleeId: box.get('id'),
-                                    // offer: incomingSDPOffer["sdpOffer"],
-                                    offer: {
-                                      "sdp": incomingSDPOffer["sdp"],
-                                      "type": incomingSDPOffer["type"],
-                                    },
-                                  );
-                                } else {
-                                  _joinCall(
-                                    callerId: incomingSDPOffer["calleeId"]!,
-                                    calleeId: box.get('id'),
-                                    // offer: incomingSDPOffer["sdpOffer"],
-                                    offer: {
-                                      "sdp": incomingSDPOffer["sdp"],
-                                      "type": incomingSDPOffer["type"],
-                                    },
-                                  );
-                                }
-                              },
-                              icon: const Icon(
-                                Icons.call,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-              padding: const EdgeInsets.symmetric(
-                vertical: 10,
-              ),
-              // maxWidth: Get.width * 0.9,
-              backgroundColor: Colors.black.withOpacity(0.7),
-              borderRadius: 20,
-              colorText: Colors.white,
-              duration: const Duration(
-                seconds: 10,
-              ),
-            );
-          }
-        }
-      }
-    });
+    //       if (incomingSDPOffer["calleeId"] != box.get('id')) {
+    //         Get.snackbar(
+    //           '',
+    //           '',
+    //           titleText: const SizedBox(),
+    //           animationDuration: const Duration(
+    //             milliseconds: 200,
+    //           ),
+    //           messageText: FutureBuilder(
+    //               future: AppServices().getUserData(
+    //                 userId: incomingSDPOffer["calleeId"],
+    //               ),
+    //               builder: (context, userSnapshot) {
+    //                 if (!userSnapshot.hasData) {
+    //                   return Center(
+    //                     child: Skeleton(
+    //                       width: 100,
+    //                       height: 20,
+    //                     ),
+    //                   );
+    //                 }
+    //                 return ListTile(
+    //                   leading: const CircleAvatar(
+    //                     radius: 28,
+    //                     child: Icon(
+    //                       Icons.person,
+    //                       size: 30,
+    //                     ),
+    //                   ),
+    //                   title: Text(
+    //                     '${userSnapshot.data!.data['username']}',
+    //                     style: const TextStyle(
+    //                       fontSize: 16,
+    //                       fontWeight: FontWeight.bold,
+    //                       color: Colors.white,
+    //                     ),
+    //                   ),
+    //                   subtitle: const Text(
+    //                     'Incoming Call...',
+    //                     style: TextStyle(fontSize: 14, color: Colors.white),
+    //                   ),
+    //                   trailing: Wrap(
+    //                     children: [
+    //                       CircleAvatar(
+    //                         backgroundColor: Colors.red,
+    //                         child: IconButton(
+    //                           onPressed: () {
+    //                             setState(() => incomingSDPOffer = null);
+    //                             Get.back();
+    //                           },
+    //                           icon: const Icon(
+    //                             Icons.call_end,
+    //                             color: Colors.white,
+    //                           ),
+    //                         ),
+    //                       ),
+    //                       const SizedBox(
+    //                         width: 10,
+    //                       ),
+    //                       CircleAvatar(
+    //                         backgroundColor: Colors.green,
+    //                         child: IconButton(
+    //                           onPressed: () {
+    //                             Get.back();
+    //                             if (incomingSDPOffer['call_type'] ==
+    //                                 'audio_call') {
+    //                               _joinAudioCall(
+    //                                 callerId: incomingSDPOffer["calleeId"]!,
+    //                                 calleeId: box.get('id'),
+    //                                 // offer: incomingSDPOffer["sdpOffer"],
+    //                                 offer: {
+    //                                   "sdp": incomingSDPOffer["sdp"],
+    //                                   "type": incomingSDPOffer["type"],
+    //                                 },
+    //                               );
+    //                             } else {
+    //                               _joinCall(
+    //                                 callerId: incomingSDPOffer["calleeId"]!,
+    //                                 calleeId: box.get('id'),
+    //                                 // offer: incomingSDPOffer["sdpOffer"],
+    //                                 offer: {
+    //                                   "sdp": incomingSDPOffer["sdp"],
+    //                                   "type": incomingSDPOffer["type"],
+    //                                 },
+    //                               );
+    //                             }
+    //                           },
+    //                           icon: const Icon(
+    //                             Icons.call,
+    //                             color: Colors.white,
+    //                           ),
+    //                         ),
+    //                       ),
+    //                     ],
+    //                   ),
+    //                 );
+    //               }),
+    //           padding: const EdgeInsets.symmetric(
+    //             vertical: 10,
+    //           ),
+    //           // maxWidth: Get.width * 0.9,
+    //           backgroundColor: Colors.black.withOpacity(0.7),
+    //           borderRadius: 20,
+    //           colorText: Colors.white,
+    //           duration: const Duration(
+    //             seconds: 10,
+    //           ),
+    //         );
+    //       }
+    //     }
+    //   }
+    // });
 
     SignallingService.instance.socket!.on("newCall", (data) {
       if (mounted) {
         // set SDP Offer of incoming call
         setState(() => incomingSDPOffer = data);
+        if (incomingSDPOffer["callerId"] != box.get('id')) {
+          Get.snackbar(
+            '',
+            '',
+            titleText: const SizedBox(),
+            animationDuration: const Duration(
+              milliseconds: 200,
+            ),
+            messageText: FutureBuilder(
+                future: AppServices().getUserData(
+                  userId: incomingSDPOffer["callerId"],
+                ),
+                builder: (context, userSnapshot) {
+                  if (!userSnapshot.hasData) {
+                    return Center(
+                      child: Skeleton(
+                        width: 100,
+                        height: 20,
+                      ),
+                    );
+                  }
+                  return ListTile(
+                    leading: const CircleAvatar(
+                      radius: 28,
+                      child: Icon(
+                        Icons.person,
+                        size: 30,
+                      ),
+                    ),
+                    title: Text(
+                      '${userSnapshot.data!.data['username']}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Incoming Call...',
+                      style: TextStyle(fontSize: 14, color: Colors.white),
+                    ),
+                    trailing: Wrap(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.red,
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() => incomingSDPOffer = null);
+                              Get.back();
+                            },
+                            icon: const Icon(
+                              Icons.call_end,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 10,
+                        ),
+                        CircleAvatar(
+                          backgroundColor: Colors.green,
+                          child: IconButton(
+                            onPressed: () {
+                              Get.back();
+                              if (incomingSDPOffer['callType'] ==
+                                  'audio_call') {
+                                _joinAudioCall(
+                                  callerId: userSnapshot.data!.$id,
+                                  calleeId: box.get('id'),
+                                  offer: incomingSDPOffer["sdpOffer"],
+                                  callName: userSnapshot.data!.data['username'], 
+                                  // offer: {
+                                  //   "sdp": incomingSDPOffer["sdp"],
+                                  //   "type": incomingSDPOffer["type"],
+                                  // },
+                                );
+                              } else {
+                                _joinCall(
+                                  callerId: userSnapshot.data!.$id,
+                                  calleeId: box.get('id'),
+                                  offer: incomingSDPOffer["sdpOffer"],
+                                  // offer: {
+                                  //   "sdp": incomingSDPOffer["sdp"],
+                                  //   "type": incomingSDPOffer["type"],
+                                  // },
+                                );
+                              }
+                            },
+                            icon: const Icon(
+                              Icons.call,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+            padding: const EdgeInsets.symmetric(
+              vertical: 10,
+            ),
+            // maxWidth: Get.width * 0.9,
+            backgroundColor: Colors.black.withOpacity(0.7),
+            borderRadius: 20,
+            colorText: Colors.white,
+            duration: const Duration(
+              seconds: 10,
+            ),
+          );
+        }
       }
     });
   }
@@ -253,6 +361,7 @@ class _HomeScreenState extends State<HomeScreen> {
   _joinAudioCall({
     required String callerId,
     required String calleeId,
+    required String callName,
     dynamic offer,
   }) {
     Navigator.push(
@@ -262,6 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
           callerId: callerId,
           calleeId: calleeId,
           offer: offer,
+          callName: callName,
         ),
       ),
     );

@@ -76,19 +76,20 @@ class AppServices {
     required String username,
   }) async {
     final databases = Databases(client);
-    final docId = DateTime.now().millisecondsSinceEpoch.toString();
+    final docId = DateTime.now().millisecondsSinceEpoch;
 
     try {
       await databases.createDocument(
         databaseId: DbPaths.database,
         collectionId: DbPaths.messagesCollection,
-        documentId: docId,
+        documentId: docId.toString(),
         data: {
           'chatId': chatId,
           'senderId': userId,
           'receiverId': receiverId,
           'message': message,
           'seen': seen,
+          'timestamp': docId,
         },
       );
 
@@ -99,7 +100,7 @@ class AppServices {
           body: message,
           peerId: receiverId,
           currentUserId: userId,
-          msgId: docId,
+          msgId: docId.toString(),
         );
       }
     } on AppwriteException catch (e) {
@@ -123,7 +124,7 @@ class AppServices {
         collectionId: DbPaths.messagesCollection,
         queries: [
           Query.equal('chatId', [chatId]),
-          // Query.equal('senderId', [userId]),
+          Query.orderAsc('timestamp'),
         ],
       );
 

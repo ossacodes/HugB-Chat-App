@@ -174,10 +174,10 @@ class _CallScreenState extends State<VideoCallScreen> {
           'type': answer.type,
         },
       );
-      // socket!.emit("answerCall", {
-      //   "callerId": widget.callerId,
-      //   "sdpAnswer": answer.toMap(),
-      // });
+      socket!.emit("answerCall", {
+        "callerId": widget.callerId,
+        "sdpAnswer": answer.toMap(),
+      });
     }
     // for Outgoing Call
     else {
@@ -283,10 +283,11 @@ class _CallScreenState extends State<VideoCallScreen> {
           'timestamp': uniqueId,
         },
       );
-      // socket!.emit('makeCall', {
-      //   "calleeId": widget.calleeId,
-      //   "sdpOffer": offer.toMap(),
-      // });
+      socket!.emit('makeCall', {
+        "calleeId": widget.calleeId,
+        'call_type': 'video_call',
+        "sdpOffer": offer.toMap(),
+      });
     }
   }
 
@@ -366,7 +367,7 @@ class _CallScreenState extends State<VideoCallScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: const Text("P2P Call App"),
+        title: const Text("Video Call"),
       ),
       body: SafeArea(
         child: Column(

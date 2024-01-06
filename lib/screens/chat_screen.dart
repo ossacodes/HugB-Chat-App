@@ -1,13 +1,10 @@
 import 'dart:async';
-
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:hive/hive.dart';
 import 'package:hugb/config/db_paths.dart';
 import 'package:hugb/screens/call/audio_call.dart';
 import 'package:hugb/screens/call/video_call.dart';
-// import 'package:flutter_mongodb_realm/flutter_mongo_realm.dart';
 import 'package:hugb/screens/widgets/message_bubble.dart';
 import 'package:hugb/services/app_services.dart';
 
@@ -37,6 +34,7 @@ class _ChatScreenState extends State<ChatScreen> {
   var box = Hive.box('myData');
   String chatId = '';
   String? myChatId;
+  bool isTyping = false;
   final client = Client()
       .setEndpoint(DbPaths.projectEndPoint) // Your Appwrite Endpoint
       .setProject(DbPaths.project) // Your project ID
@@ -71,6 +69,24 @@ class _ChatScreenState extends State<ChatScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             setState(() {});
+          }
+        });
+      }
+    });
+
+    final chatSubscription = realtime.subscribe([
+      'databases.${DbPaths.database}.collections.${DbPaths.chatsCollection}.documents.${widget.docId}'
+    ]);
+
+    chatSubscription.stream.listen((response) {
+      if (response.events
+          .contains("databases.*.collections.*.documents.*.update")) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final payload = response.payload;
+          if (mounted) {
+            setState(() {
+              isTyping = payload['isTyping'];
+            });
           }
         });
       }
@@ -206,6 +222,7 @@ class _ChatScreenState extends State<ChatScreen> {
   _joinAudioCall({
     required String callerId,
     required String calleeId,
+    required String callName,
     dynamic offer,
   }) {
     Navigator.push(
@@ -214,7 +231,7 @@ class _ChatScreenState extends State<ChatScreen> {
         builder: (_) => AudioCallScreen(
           callerId: callerId,
           calleeId: calleeId,
-          offer: offer,
+          offer: offer, callName: callName,
         ),
       ),
     );
@@ -269,6 +286,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ActivityWidget(
                         userId: widget.userId,
                         docId: widget.docId,
+                        isTyping: isTyping,
                       ),
                     ],
                   ),
@@ -344,6 +362,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 _joinAudioCall(
                                   callerId: box.get('id'),
                                   calleeId: widget.userId,
+                                  callName: widget.username,
                                 );
 
                                 AppServices.sendCallWake(
@@ -600,10 +619,12 @@ class ActivityWidget extends StatefulWidget {
     super.key,
     required this.userId,
     required this.docId,
+    required this.isTyping,
   });
 
   final String userId;
   final String docId;
+  final bool isTyping;
 
   @override
   State<ActivityWidget> createState() => _ActivityWidgetState();
@@ -611,45 +632,14 @@ class ActivityWidget extends StatefulWidget {
 
 class _ActivityWidgetState extends State<ActivityWidget> {
   final client = Client()
-      .setEndpoint('https://exwoo.com/v1')
+      .setEndpoint(DbPaths.projectEndPoint)
       .setProject(DbPaths.project)
       .setSelfSigned();
-  bool isTyping = false;
-  late RealtimeSubscription subscription;
-
-  @override
-  void initState() {
-    super.initState();
-    final realtime = Realtime(client);
-    subscription = realtime.subscribe([
-      'databases.${DbPaths.database}.collections.${DbPaths.chatsCollection}.documents.${widget.docId}'
-    ]);
-
-    subscription.stream.listen((response) {
-      if (response.events
-          .contains("databases.*.collections.*.documents.*.update")) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final payload = response.payload;
-          if (mounted) {
-            setState(() {
-              isTyping = payload['isTyping'];
-            });
-          }
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    subscription.close(); // Cancel the subscription when the widget is disposed
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Visibility(
-      visible: isTyping,
+      visible: widget.isTyping,
       child: const Text(
         'Typing...',
         style: TextStyle(

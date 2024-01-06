@@ -8,11 +8,13 @@ import 'package:hugb/services/signalling.service.dart';
 class AudioCallScreen extends StatefulWidget {
   final String callerId, calleeId;
   final dynamic offer;
+  final String callName;
   const AudioCallScreen({
     super.key,
     this.offer,
     required this.callerId,
     required this.calleeId,
+    required this.callName,
   });
 
   @override
@@ -159,10 +161,10 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
           'type': answer.type,
         },
       );
-      // socket!.emit("answerCall", {
-      //   "callerId": widget.callerId,
-      //   "sdpAnswer": answer.toMap(),
-      // });
+      socket!.emit("answerCall", {
+        "callerId": widget.callerId,
+        "sdpAnswer": answer.toMap(),
+      });
     }
     // for Outgoing Call
     else {
@@ -229,10 +231,11 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
           'timestamp': uniqueId,
         },
       );
-      // socket!.emit('makeCall', {
-      //   "calleeId": widget.calleeId,
-      //   "sdpOffer": offer.toMap(),
-      // });
+      socket!.emit('makeCall', {
+        "calleeId": widget.calleeId,
+        "sdpOffer": offer.toMap(),
+        'call_type': 'audio_call',
+      });
     }
   }
 
@@ -255,7 +258,7 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: const Text("P2P Call App"),
+        title: const Text("Audio Call"),
       ),
       body: SafeArea(
         child: Column(
@@ -294,9 +297,9 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
                           ), // Replace with the caller's profile picture URL
                         ),
                         const SizedBox(height: 20.0),
-                        const Text(
-                          'Caller Name', // Replace with the caller's name
-                          style: TextStyle(
+                        Text(
+                          widget.callName, // Replace with the caller's name
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24.0,
                             fontWeight: FontWeight.bold,
