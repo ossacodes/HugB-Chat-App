@@ -16,6 +16,7 @@ class ChatScreen extends StatefulWidget {
     required this.userId,
     required this.email,
     required this.docId,
+    required this.unreadMessages,
   });
 
   final String username;
@@ -23,6 +24,7 @@ class ChatScreen extends StatefulWidget {
   final String userId;
   final String email;
   final String docId;
+  final int unreadMessages;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -74,27 +76,41 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
 
-    final chatSubscription = realtime.subscribe([
-      'databases.${DbPaths.database}.collections.${DbPaths.chatsCollection}.documents.${widget.docId}'
-    ]);
+    // final chatSubscription = realtime.subscribe([
+    //   'databases.${DbPaths.database}.collections.${DbPaths.chatsCollection}.documents.${widget.docId}'
+    // ]);
 
-    chatSubscription.stream.listen((response) {
-      if (response.events
-          .contains("databases.*.collections.*.documents.*.update")) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final payload = response.payload;
-          if (mounted) {
-            setState(() {
-              isTyping = payload['isTyping'];
-            });
-          }
-        });
-      }
-    });
+    // chatSubscription.stream.listen((response) {
+    //   if (response.events
+    //       .contains("databases.*.collections.*.documents.*.update")) {
+    //     WidgetsBinding.instance.addPostFrameCallback((_) {
+    //       final payload = response.payload;
+    //       if (mounted) {
+    //         setState(() {
+    //           isTyping = payload['isTyping'];
+    //         });
+    //       }
+    //     });
+    //   }
+    // });
 
     getMyChatId();
 
     messageStream = subscription.stream;
+  }
+
+  @override
+  void didChangeDependencies() async {
+    super.didChangeDependencies();
+    final databases = Databases(client);
+    await databases.updateDocument(
+      databaseId: DbPaths.database,
+      collectionId: DbPaths.chatsCollection,
+      documentId: widget.docId,
+      data: {
+        'unreadCount': 0,
+      },
+    );
   }
 
   Future getMyChatId() async {
@@ -231,7 +247,8 @@ class _ChatScreenState extends State<ChatScreen> {
         builder: (_) => AudioCallScreen(
           callerId: callerId,
           calleeId: calleeId,
-          offer: offer, callName: callName,
+          offer: offer,
+          callName: callName,
         ),
       ),
     );
@@ -547,6 +564,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                                 .data!
                                                 .data['notificationToken'],
                                           );
+                                          await AppServices().createChat(
+                                            chatOwnerId: widget.userId,
+                                            userId: box.get('id'),
+                                            currentMessage: textMessage,
+                                            username: box.get('username'),
+                                            email: box.get('email'),
+                                            profileUrl: null,
+                                            chatId: chatId,
+                                          );
 
                                           await AppServices().createChat(
                                             chatOwnerId: box.get('id'),
@@ -555,15 +581,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                             username: widget.username,
                                             email: widget.email,
                                             profileUrl: null,
+                                            chatId: chatId,
                                           );
-                                          await AppServices().createChat(
-                                            chatOwnerId: widget.userId,
-                                            userId: box.get('id'),
-                                            currentMessage: textMessage,
-                                            username: box.get('username'),
-                                            email: box.get('email'),
-                                            profileUrl: null,
-                                          );
+
                                           // AppServices().createMessage(
                                           //   chatId: chatId,
                                           //   message: textMessage,

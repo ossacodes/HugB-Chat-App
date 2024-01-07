@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
+import 'package:hive/hive.dart';
 import 'package:hugb/config/db_paths.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -144,11 +145,22 @@ class AppServices {
     required String username,
     required String email,
     required String? profileUrl,
+    required String chatId,
   }) async {
     final databases = Databases(client);
     final docId = DateTime.now().millisecondsSinceEpoch.toString();
+    var box = Hive.box('myData');
 
     try {
+      final documents = await databases.listDocuments(
+        databaseId: DbPaths.database,
+        collectionId: DbPaths.messagesCollection,
+        queries: [
+          Query.equal('chatId', [chatId]),
+          Query.equal('senderId', [userId]),
+          Query.equal('seen', [false]),
+        ],
+      );
       await databases.listDocuments(
         databaseId: DbPaths.database,
         collectionId: DbPaths.chatsCollection,
@@ -164,35 +176,71 @@ class AppServices {
         ],
       ).then((value) async {
         if (value.documents.isEmpty) {
-          await databases.createDocument(
-            databaseId: DbPaths.database,
-            collectionId: DbPaths.chatsCollection,
-            documentId: docId,
-            data: {
-              'ownerId': chatOwnerId,
-              'userId': userId,
-              'currentMessage': currentMessage,
-              'username': username,
-              'profileUrl': profileUrl,
-              'email': email,
-              'timestamp': int.parse(docId),
-            },
-          );
+          if (chatOwnerId != box.get('id')) {
+            await databases.createDocument(
+              databaseId: DbPaths.database,
+              collectionId: DbPaths.chatsCollection,
+              documentId: docId,
+              data: {
+                'ownerId': chatOwnerId,
+                'userId': userId,
+                'currentMessage': currentMessage,
+                'username': username,
+                'profileUrl': profileUrl,
+                'email': email,
+                'timestamp': int.parse(docId),
+                'unreadCount': documents.total,
+              },
+            );
+          } else {
+            await databases.createDocument(
+              databaseId: DbPaths.database,
+              collectionId: DbPaths.chatsCollection,
+              documentId: docId,
+              data: {
+                'ownerId': chatOwnerId,
+                'userId': userId,
+                'currentMessage': currentMessage,
+                'username': username,
+                'profileUrl': profileUrl,
+                'email': email,
+                'timestamp': int.parse(docId),
+              },
+            );
+          }
         } else {
-          await databases.updateDocument(
-            databaseId: DbPaths.database,
-            collectionId: DbPaths.chatsCollection,
-            documentId: value.documents[0].$id,
-            data: {
-              'ownerId': chatOwnerId,
-              'userId': userId,
-              'currentMessage': currentMessage,
-              'username': username,
-              'profileUrl': profileUrl,
-              'email': email,
-              'timestamp': int.parse(docId),
-            },
-          );
+          if (chatOwnerId != box.get('id')) {
+            await databases.updateDocument(
+              databaseId: DbPaths.database,
+              collectionId: DbPaths.chatsCollection,
+              documentId: value.documents[0].$id,
+              data: {
+                'ownerId': chatOwnerId,
+                'userId': userId,
+                'currentMessage': currentMessage,
+                'username': username,
+                'profileUrl': profileUrl,
+                'email': email,
+                'timestamp': int.parse(docId),
+                'unreadCount': documents.total,
+              },
+            );
+          } else {
+            await databases.updateDocument(
+              databaseId: DbPaths.database,
+              collectionId: DbPaths.chatsCollection,
+              documentId: value.documents[0].$id,
+              data: {
+                'ownerId': chatOwnerId,
+                'userId': userId,
+                'currentMessage': currentMessage,
+                'username': username,
+                'profileUrl': profileUrl,
+                'email': email,
+                'timestamp': int.parse(docId),
+              },
+            );
+          }
         }
       });
     } on AppwriteException catch (e) {
@@ -310,29 +358,25 @@ class AppServices {
   }
 
   // get unread message count
-  Future<int> getUnreadMessageCount({
-    required String userId,
+  Future<Document> getUnreadMessageCount({
+    required String docId,
   }) async {
     final databases = Databases(client);
-    int count = 0;
-
+    late Document doc;
     try {
-      final document = await databases.listDocuments(
+      final document = await databases.getDocument(
         databaseId: DbPaths.database,
-        collectionId: DbPaths.messagesCollection,
-        queries: [
-          Query.equal('receiverId', [userId]),
-          Query.equal('seen', [false]),
-        ],
+        collectionId: DbPaths.chatsCollection,
+        documentId: docId,
       );
 
-      count = document.total;
+      doc = document;
 
-      return count;
+      return document;
     } on AppwriteException catch (e) {
       print(e);
     }
-    return count;
+    return doc;
   }
 
 // send call wake notification

@@ -134,6 +134,7 @@ class UserSearchDelegate extends SearchDelegate<String> {
                       userId: usersData[index].data['userId'],
                       email: usersData[index].data['email'],
                       docId: usersData[index].$id,
+                      unreadMessages: 0,
                     ),
                   );
                 },

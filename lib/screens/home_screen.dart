@@ -468,6 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemBuilder: (context, index) {
                           return ChatTile(
                             usersData: usersData[index],
+                            docId: usersData[index].$id,
                           );
                         },
                       )
